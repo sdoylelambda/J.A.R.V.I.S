@@ -5,6 +5,6 @@ class Brain:
     def create_plan(self, intent: str):
         print(f"Brain received intent: {intent}")
         return {
-            "summary": f"I plan to handle: {intent}",
+            "summary": f"I plan to: {intent}",
             "tasks": [{"action": "create_file", "filename": "main.py", "content": "print('Hello World')"}]
         }
