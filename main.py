@@ -24,6 +24,7 @@ def main():
         approval = awareness.listen_confirmation()
 
         if approval:
+            awareness.speak(plan['summary'])
             hands.execute(plan)
         else:
             awareness.speak("Plan cancelled.")
