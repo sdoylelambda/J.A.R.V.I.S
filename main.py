@@ -10,7 +10,7 @@ def main():
     brain = Brain()
     hands = Hands()
     awareness = Awareness()
-    print("Jarvis MVP (single-node) running...")
+    print("Jarvis (single-node) running...")
     
     while True:
         intent = awareness.listen()

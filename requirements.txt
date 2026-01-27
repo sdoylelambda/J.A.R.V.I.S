@@ -1,2 +1,8 @@
+transformers
+torch
+sentence-transformers
+faiss-cpu
 pyttsx3
 simpleaudio
+TTS
+PyYAML
