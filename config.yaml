@@ -1,0 +1,55 @@
+# ---- Node identity ----
+node:
+  name: "g7"
+  role: "single_node" # single_node | observer | brain | hands
+
+# ---- Networking (future use) ----
+network:
+  brain_ip: "127.0.0.1"
+  brain_port: 8000
+  hands_ip: "127.0.0.1"
+  hands_port: 8001
+  observer_ip: "127.0.0.1"
+  observer_port: 8002
+
+# ---- LLM (disabled for now) ----
+llm:
+  enabled: false # <-- keep false until you add a model
+  backend: "local" # local | remote
+  model_path: "./models/mpt-7b/"
+  max_tokens: 2048
+  temperature: 0.4
+
+# ---- Memory ----
+memory:
+  enabled: false # enable later when adding FAISS
+  vector_db_path: "./memory/vector_db/"
+  short_term_db: "./memory/short_term.db"
+  recall_top_k: 5
+
+# ---- Audio ----
+audio:
+  stt:
+    enabled: false # mock input for now
+    engine: "whisper"
+    model: "base"
+  tts:
+    enabled: false # mock TTS for now
+    engine: "coqui"
+    voice: "default"
+
+# ---- Execution permissions ----
+permissions:
+  allow_file_write: true
+  allow_command_exec: false # safer default
+  allow_network: false
+
+# ---- Logging ----
+logging:
+  level: "INFO"
+  file: "./logs/jarvis.log"
+
+# ---- Development ----
+dev:
+  mock_mode: true # IMPORTANT: keeps everything lightweight
+  auto_approve: false
