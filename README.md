@@ -1,14 +1,17 @@
 ﻿# J.A.R.V.I.S
-An AI assistant based on Iron Man's J.A.R.V.I.S
+An AI assistant based on Iron Man's J.A.R.V.I.S.
 
 ### MVP
-Voice Command
-Voice Response
+Voice Commands
+Voice Responses
 Test dummy LLM data -> Small LLM -> Larger (simply replace LLM folder with desired LLM)
 Open/use Programs
 Enter data
+Ask Questions
+Remeber Conversations
+Adapt
 
-###S tretch
+### Stretch Goals
 Multiple nodes
     3 Nodes setup
     1 - Brain - AI decisions - Primary Computer
@@ -27,4 +30,4 @@ Cell phone sends plan accepted message to Primary Computer.
 Primary Computer sends plan to work station.
 Work station opens Pycharm, creates project. Sends screenshot to cell phone.
 User views screenshot on cellphone then says run it.
-Project runs on secondary computer. (Reduces load on primary computer and mic/speakers/etc. not used by primary computer)
+Project runs on secondary computer. (Reduces load on primary computer, periphals, monitor, etc - Primary computer free to function as normal without interference.)
