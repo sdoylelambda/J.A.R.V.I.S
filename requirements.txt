@@ -6,3 +6,6 @@ pyttsx3
 simpleaudio
 TTS
 PyYAML
+whisper
+ffmpeg
+openai-whisper
