@@ -1,24 +1,32 @@
 from modules.stt import STT
 from modules.tts import TTSModule
+from modules.brain import Brain
+from modules.hands import Hands
+import time
+
 
 class Observer:
     def __init__(self):
-        self.stt = STT()
+        self.stt = STT(use_mock=False)
         self.tts = TTSModule()
         print("Observer initialized.")
 
     def listen(self):
-        audio_path = input("Simulated audio path or text: ")
+        # audio_path = input("Simulated audio path or text: ")
         # For real mic: integrate PyAudio
-        return self.stt.transcribe(audio_path)
+        # return self.stt.transcribe(audio_path)
+        return self.stt.ears()
 
     def listen_confirmation(self):
-        resp = input("Approve plan? (y/n): ")
-        return resp.lower() in ['y','yes']
+        print("[Observer] Awaiting confirmation (yes/no)...")
+        response = self.stt.ears()
+        if response:
+            return response.lower() in ["yes", "yep", "affirmative"]
+        return False
 
     def speak(self, text):
         print(f"Jarvis says: {text}")
-        self.tts.speak(text)
+        self.tts.speak(text, play_audio=True)
 
 
 

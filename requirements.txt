@@ -9,3 +9,6 @@ PyYAML
 whisper
 ffmpeg
 openai-whisper
+speechrecognition
+sounddevice
+scipy
