@@ -4,6 +4,7 @@ from modules.tts import TTSModule  # your updated Mouth class
 from modules.brain import Brain
 from modules.hands import Hands
 from modules.observer import Observer
+from modules.app_launcher import AppLauncher
 
 
 def main():
@@ -14,6 +15,7 @@ def main():
     brain = Brain()
     hands = Hands()
     observer = Observer()
+    launcher = AppLauncher()
 
     print("Jarvis running... Say 'exit' to quit.")
 
@@ -37,6 +39,16 @@ def main():
         if spoken_text.lower() in ["exit", "quit", "stop"]:
             print("Exiting...")
             break
+
+        # Voice command to open apps
+        if "open " in spoken_text.lower():
+            app_name = spoken_text.lower().replace("open ", "").strip()
+            launcher.open_app(app_name)
+            continue  # Skip the rest of loop for now
+
+        # if spoken_text.lower() in ["open pycharm"]:
+        #     print("Opening pycharm...")
+        #     open(pycharm)
 
         observer.speak(f"You said: {spoken_text}")
 
