@@ -1,27 +1,81 @@
 from modules.observer import Observer
-from modules.app_launcher import AppLauncher
 
-
-def main():
-    # Where should while loop be? Here or below?
-
-    print("Jarvis starting...")
-    # observer = Observer()
-    #
-    # while True:
-    #     observer.listen_and_speak()
-        # text = observer.listen()
-        # print("[Heard]:", text)
 
 if __name__ == "__main__":
-    jarvis = Observer()
+    observer = Observer()
+    observer.listen_and_respond()
 
-    print("\n[Jarvis] Ready. Speak now. Press Ctrl+C to stop.\n")
-    try:
-        while True:
-            jarvis.listen_and_respond()
-    except KeyboardInterrupt:
-        print("\n[Jarvis] Exiting.")
+
+
+
+
+
+
+
+
+
+
+
+
+# def main():
+#     # 1️⃣ Initialize Observer
+#     observer = Observer(config_path="config.yaml")
+#
+#     print("[Observer] Listening and responding...")
+#
+#     try:
+#         # 2️⃣ Stream from mic (short & long chunks)
+#         for text in observer.ears.listen_stream(short_chunk_sec=1.0, long_chunk_sec=5.0):
+#             if text:
+#                 print(f"[Heard]: {text}")
+#
+#                 # 3️⃣ Handle short commands
+#                 observer.launcher.open_app(text)
+#
+#                 # 4️⃣ Speak the transcribed text
+#                 observer.mouth.speak(text)
+#
+#     except KeyboardInterrupt:
+#         print("\n[Observer] Stopped by user.")
+#     finally:
+#         observer.running = False
+#         print("[Observer] Shutting down.")
+#
+# if __name__ == "__main__":
+#     main()
+
+
+
+
+
+
+
+
+
+# from modules.observer import Observer
+# from modules.app_launcher import AppLauncher
+#
+#
+# def main():
+#     # Where should while loop be? Here or below?
+#
+#     print("Jarvis starting...")
+#     # observer = Observer()
+#     #
+#     # while True:
+#     #     observer.listen_and_speak()
+#         # text = observer.listen()
+#         # print("[Heard]:", text)
+#
+# if __name__ == "__main__":
+#     jarvis = Observer()
+#
+#     print("\n[Jarvis] Ready. Speak now. Press Ctrl+C to stop.\n")
+#     try:
+#         while True:
+#             jarvis.listen_and_respond()
+#     except KeyboardInterrupt:
+#         print("\n[Jarvis] Exiting.")
 
 
 
