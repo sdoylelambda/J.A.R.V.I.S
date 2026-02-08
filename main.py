@@ -1,16 +1,27 @@
 from modules.observer import Observer
+from modules.app_launcher import AppLauncher
+
 
 def main():
+    # Where should while loop be? Here or below?
+
     print("Jarvis starting...")
-
-    observer = Observer()
-
-    while True:
-        text = observer.listen()
-        print("[Heard]:", text)
+    # observer = Observer()
+    #
+    # while True:
+    #     observer.listen_and_speak()
+        # text = observer.listen()
+        # print("[Heard]:", text)
 
 if __name__ == "__main__":
-    main()
+    jarvis = Observer()
+
+    print("\n[Jarvis] Ready. Speak now. Press Ctrl+C to stop.\n")
+    try:
+        while True:
+            jarvis.listen_and_respond()
+    except KeyboardInterrupt:
+        print("\n[Jarvis] Exiting.")
 
 
 

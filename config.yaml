@@ -30,7 +30,7 @@ memory:
 # ---- Audio ----
 audio:
   samplerate: 16000
-  duration: 1.5
+  duration: 5
   mic_index: null
   use_mock: false
 
@@ -62,7 +62,7 @@ stt:
   backend: faster_whisper   # faster_whisper | whisper
   model: small              # tiny | base | small | medium
   language: en
-  duration: 1.5
+  duration: 5
 
 system:
   cpu_threads: 1

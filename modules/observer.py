@@ -1,23 +1,135 @@
 from modules.stt.factory import create_stt
+from modules.stt.faster_whisper_stt import FasterWhisperSTT
+from modules.stt.hybrid_stt import HybridSTT
+from modules.app_launcher import AppLauncher
+from modules.tts import TTSModule
 from modules.ears import Ears
 import yaml
 
+
+# Rename as Jarvis?
 class Observer:
-    def __init__(self):
-        with open("config.yaml") as f:
+    def __init__(self, config_file="config.yaml"):
+        with open(config_file) as f:
             config = yaml.safe_load(f)
 
-        self.stt = create_stt(config)
-        self.ears = Ears(
-            stt=self.stt,
-            samplerate=config["audio"]["samplerate"],
-            duration=config["audio"]["duration"],
-            mic_index=config["audio"].get("mic_index"),
-            use_mock=config["audio"].get("use_mock", False),
+        use_gpu = config["system"].get("use_gpu", False)
+        self.stt = HybridSTT(
+            whisper_model=config["stt"].get("whisper_model", "small"),
+            fw_model=config["stt"].get("fw_model", "small"),
+            use_gpu=use_gpu
         )
+        self.ears = Ears(self.stt, mic_index=config["audio"].get("mic_index", 0),
+                         duration=config["audio"].get("duration", 3))
+        self.tts = TTSModule(gpu=use_gpu)
+        self.launcher = AppLauncher()
 
-    def listen(self):
-        return self.ears.listen()
+    def listen_and_respond(self):
+        text = self.ears.listen()
+        text = text.strip()
+        if not text:
+            return
+
+        print(f"[Heard]: {text}")
+
+        # Check for app commands first
+        if self.launcher.open_app(text):
+            self.tts.speak(f"Opening {text}")
+        else:
+            self.tts.speak(text)
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+    # def __init__(self, config_file="config.yaml"):
+    #     with open(config_file) as f:
+    #         config = yaml.safe_load(f)
+    #
+    #     # Initialize STT engine
+    #     engine = config["transcription"]["engine"].lower()
+    #     if engine == "faster-whisper":
+    #         self.stt = FasterWhisperSTT(config)
+    #     else:
+    #         raise ValueError(f"Unknown STT engine: {engine}")
+    #
+    #     # Microphone listener
+    #     self.ears = Ears(self.stt, use_mock=config["audio"].get("use_mock", False))
+    #
+    #     # TTS
+    #     self.tts = TTSModule(
+    #         use_mock=config["audio"].get("use_mock", False),
+    #         gpu=config["system"].get("use_gpu", False)
+    #     )
+    #
+    # def listen_and_speak(self):
+    #     text = self.ears.listen()
+    #     if len(text.strip()) < 2:
+    #         print("[Jarvis] Ignored too short input.")
+    #     else:  # refactor this
+    #         if text.strip():
+    #             print(f"[Heard]: {text}")
+    #             self.tts.speak(text)
+
+
+
+
+
+
+
+
+
+
+# class Observer:
+#     def __init__(self, config_file="config.yaml"):
+#         with open(config_file) as f:
+#             config = yaml.safe_load(f)
+#
+#         engine = config["transcription"]["engine"].lower()
+#         if engine == "faster_whisper":
+#             self.stt = FasterWhisperSTT(config)
+#         elif engine == "whisper":
+#             self.stt = WhisperSTT(config)
+#         else:
+#             raise ValueError(f"Unknown STT engine: {engine}")
+#
+#         self.ears = Ears(self.stt, use_mock=config["audio"].get("use_mock", False))
+#         self.tts = TTSModule(
+#             use_mock=config["audio"].get("use_mock", False),
+#             gpu=config["system"].get("use_gpu", False)
+#         )
+#
+#     def listen_and_speak(self):
+#         text = self.ears.listen()
+#         if text:
+#             print(f"[Heard]: {text}")
+#             self.tts.speak(text)
+
+# class Observer:
+#     def __init__(self):
+#         with open("config.yaml") as f:
+#             config = yaml.safe_load(f)
+#
+#         self.stt = create_stt(config)
+#         self.ears = Ears(
+#             stt=self.stt,
+#             samplerate=config["audio"]["samplerate"],
+#             duration=config["audio"]["duration"],
+#             mic_index=config["audio"].get("mic_index"),
+#             use_mock=config["audio"].get("use_mock", False),
+#         )
+#
+#     def listen(self):
+#         return self.ears.listen()
 
 
 

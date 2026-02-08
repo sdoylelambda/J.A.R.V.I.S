@@ -1,6 +1,7 @@
 import subprocess
 import shlex
 
+
 class AppLauncher:
     def __init__(self):
         # Map spoken names to executable paths
@@ -21,6 +22,8 @@ class AppLauncher:
                     print(f"[Launcher] Executable not found: {path}")
                 return
         print(f"[Launcher] App not recognized: {spoken_name}")
+
+
 
     # def open_app(self, spoken_name):
     #     # Normalize name
