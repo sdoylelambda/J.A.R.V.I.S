@@ -29,10 +29,14 @@ memory:
 
 # ---- Audio ----
 audio:
-  stt:
-    enabled: false # mock input for now
-    engine: "whisper"
-    model: "base"
+  samplerate: 16000
+  duration: 15          # Length of message that can be heard
+  mic_index: null
+  use_mock: false
+
+transcription:
+  engine: faster-whisper
+
   tts:
     enabled: false # mock TTS for now
     engine: "coqui"
@@ -53,3 +57,13 @@ logging:
 dev:
   mock_mode: true # IMPORTANT: keeps everything lightweight
   auto_approve: false
+
+stt:
+  backend: faster_whisper   # faster_whisper | whisper
+  model: small              # tiny | base | small | medium
+  language: en
+  duration: 15              # Length of message that can be heard
+
+system:
+  cpu_threads: 1
+  use_gpu: false

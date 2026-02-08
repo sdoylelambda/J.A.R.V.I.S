@@ -12,3 +12,5 @@ openai-whisper
 speechrecognition
 sounddevice
 scipy
+numpy
+faster-whisper
