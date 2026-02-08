@@ -1,71 +1,95 @@
-import time
-from modules.stt import STT        # updated Ears class with Whisper
-from modules.tts import TTSModule  # your updated Mouth class
-from modules.brain import Brain
-from modules.hands import Hands
 from modules.observer import Observer
-from modules.app_launcher import AppLauncher
-
 
 def main():
     print("Jarvis starting...")
-    # Real STT/TTS
-    ears = STT(use_mock=False, mic_index=0)  # mic_index can be changed if needed
-    mouth = TTSModule(use_mock=False)
-    brain = Brain()
-    hands = Hands()
-    observer = Observer()
-    launcher = AppLauncher()
 
-    print("Jarvis running... Say 'exit' to quit.")
+    observer = Observer()
 
     while True:
-        # Listen for an intent
-        print("[Observer] Waiting for intent...")
-        try:
-            spoken_text = ears.ears()  # records and transcribes audio
-        except Exception as e:
-            print(f"[Ears] Error capturing audio: {e}")
-            time.sleep(0.5)
-            continue
-
-        if not spoken_text:
-            print("[Ears] Nothing detected, continuing...")
-            time.sleep(0.5)
-            continue
-
-        print(f"[Observer] Heard: {spoken_text}")
-
-        if spoken_text.lower() in ["exit", "quit", "stop"]:
-            print("Exiting...")
-            break
-
-        # Voice command to open apps
-        if "open " in spoken_text.lower():
-            app_name = spoken_text.lower().replace("open ", "").strip()
-            launcher.open_app(app_name)
-            continue  # Skip the rest of loop for now
-
-        # if spoken_text.lower() in ["open pycharm"]:
-        #     print("Opening pycharm...")
-        #     open(pycharm)
-
-        observer.speak(f"You said: {spoken_text}")
-
-        # Create plan based on intent
-        plan = brain.create_plan(spoken_text)
-        observer.speak(plan['summary'])
-
-        # Ask for approval
-        approval = observer.listen_confirmation()
-        if approval:
-            hands.execute(plan)
-        else:
-            observer.speak("Plan cancelled.")
-
+        text = observer.listen()
+        print("[Heard]:", text)
 
 if __name__ == "__main__":
     main()
+
+
+
+
+
+
+
+
+
+
+# import time
+# # from modules.stt import STT        # updated Ears class with Whisper
+# from modules.tts import TTSModule  # your updated Mouth class
+# from modules.brain import Brain
+# from modules.hands import Hands
+# from modules.observer import Observer
+# from modules.app_launcher import AppLauncher
+#
+#
+# def main(self):
+#     print("Jarvis starting...")
+#     # Real STT/TTS
+#     observer = Observer()
+#     ears = observer.listen(audio)
+#     mouth = TTSModule(use_mock=False)
+#     brain = Brain()
+#     hands = Hands()
+#     observer = Observer()
+#     launcher = AppLauncher()
+#
+#     print("Jarvis running... Say 'exit' to quit.")
+#
+#     while True:
+#         # Listen for an intent
+#         print("[Observer] Waiting for intent...")
+#         try:
+#             spoken_text = ears.ears()  # records and transcribes audio
+#         except Exception as e:
+#             print(f"[Ears] Error capturing audio: {e}")
+#             time.sleep(0.5)
+#             continue
+#
+#         if not spoken_text:
+#             print("[Ears] Nothing detected, continuing...")
+#             time.sleep(0.5)
+#             continue
+#
+#         print(f"[Observer] Heard: {spoken_text}")
+#
+#         if spoken_text.lower() in ["exit", "quit", "stop"]:
+#             print("Exiting...")
+#             break
+#
+#         # Voice command to open apps
+#         if "open " in spoken_text.lower():
+#             app_name = spoken_text.lower().replace("open ", "").strip()
+#             launcher.open_app(app_name)
+#             continue  # Skip the rest of loop for now
+#
+#         # if spoken_text.lower() in ["open pycharm"]:
+#         #     print("Opening pycharm...")
+#         #     open(pycharm)
+#
+#         observer.speak(f"You said: {spoken_text}")
+#
+#         # Create plan based on intent
+#         plan = brain.create_plan(spoken_text)
+#         observer.speak(plan['summary'])
+#
+#         # Ask for approval
+#         approval = observer.listen_confirmation()
+#         if approval:
+#             hands.execute(plan)
+#         else:
+#             observer.speak("Plan cancelled.")
+#
+#
+# if __name__ == "__main__":
+#     main(self=any)
 
 
 

@@ -1,34 +1,62 @@
-from modules.stt import STT
-from modules.tts import TTSModule
-from modules.brain import Brain
-from modules.hands import Hands
-import time
-
+from modules.stt.factory import create_stt
+from modules.ears import Ears
+import yaml
 
 class Observer:
     def __init__(self):
-        self.stt = STT(use_mock=False)
-        self.tts = TTSModule()
-        print("Observer initialized.")
+        with open("config.yaml") as f:
+            config = yaml.safe_load(f)
+
+        self.stt = create_stt(config)
+        self.ears = Ears(
+            stt=self.stt,
+            samplerate=config["audio"]["samplerate"],
+            duration=config["audio"]["duration"],
+            mic_index=config["audio"].get("mic_index"),
+            use_mock=config["audio"].get("use_mock", False),
+        )
 
     def listen(self):
-        # audio_path = input("Simulated audio path or text: ")
-        # For real mic: integrate PyAudio
-        # return self.stt.transcribe(audio_path)
-        return self.stt.ears()
-
-    def listen_confirmation(self):
-        print("[Observer] Awaiting confirmation (yes/no)...")
-        response = self.stt.ears()
-        if response:
-            return response.lower() in ["yes", "yep", "affirmative"]
-        return False
-
-    def speak(self, text):
-        print(f"Jarvis says: {text}")
-        self.tts.speak(text, play_audio=True)
+        return self.ears.listen()
 
 
+
+
+
+# from modules.stt.__init__ import create_stt
+# import yaml
+# from modules.brain import Brain
+# from modules.hands import Hands
+# import time
+#
+#
+# class Observer:
+#     def __init__(self):
+#         with open("config.yaml") as f:
+#             config = yaml.safe_load(f)
+#
+#         self.stt = create_stt(config)
+#         print("Observer initialized.")
+#
+#     def listen(self, audio):
+#         # audio_path = input("Simulated audio path or text: ")
+#         # For real mic: integrate PyAudio
+#         # return self.stt.transcribe(audio_path)
+#         # return self.stt.ears()
+#         return self.stt.transcribe(audio)
+#
+#     def listen_confirmation(self):
+#         print("[Observer] Awaiting confirmation (yes/no)...")
+#         response = self.stt.ears()
+#         if response:
+#             return response.lower() in ["yes", "yep", "affirmative"]
+#         return False
+#
+#     def speak(self, text):
+#         print(f"Jarvis says: {text}")
+#         self.tts.speak(text, play_audio=True)
+#
+#
 
 
 
