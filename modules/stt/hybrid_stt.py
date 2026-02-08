@@ -1,6 +1,6 @@
-# modules/stt/hybrid_stt.py
 import whisper
 from faster_whisper import WhisperModel
+
 
 class HybridSTT:
     def __init__(self, whisper_model="small", fw_model="small", use_gpu=False):

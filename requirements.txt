@@ -13,3 +13,4 @@ speechrecognition
 sounddevice
 scipy
 numpy
+faster-whisper

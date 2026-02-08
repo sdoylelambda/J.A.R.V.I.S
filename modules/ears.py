@@ -4,7 +4,7 @@ import numpy as np
 from scipy.io.wavfile import write
 
 class Ears:
-    def __init__(self, samplerate=16000, mic_index=None, duration=7):
+    def __init__(self, samplerate=16000, mic_index=None, duration=15):
         self.samplerate = samplerate
         self.mic_index = mic_index
         self.duration = duration

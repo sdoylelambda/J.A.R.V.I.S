@@ -6,7 +6,7 @@ from scipy.io.wavfile import write
 
 
 class STT:
-    def __init__(self, use_mock=False, mic_index=0, samplerate=44100, duration=5):
+    def __init__(self, use_mock=False, mic_index=0, samplerate=16000, duration=15):
         """
         Speech-to-Text class
         - use_mock: True uses input() instead of microphone
