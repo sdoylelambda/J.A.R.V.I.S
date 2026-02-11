@@ -14,3 +14,6 @@ sounddevice
 scipy
 numpy
 faster-whisper
+vispy
+threading
+numpy
