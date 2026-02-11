@@ -1,15 +1,16 @@
-import subprocess
-import shlex
 import os
+import subprocess
+import urllib.parse
 
 
 class AppLauncher:
     def __init__(self):
         self.apps = {
             "pycharm": {
-                "path": "/opt/pycharm-community-2025.3.1/bin/pycharm.sh",
+                "path": "/opt/pycharm/bin/pycharm.sh",
                 "aliases": [
                     "pycharm",
+                    "charm",
                     "idea",
                     "jetbrains",
                     "open pycharm",
@@ -34,11 +35,11 @@ class AppLauncher:
                     "browser",
                     "open browser",
                     "launch firefox",
-                    "Bowser"
+                    "bowser"
                 ],
             },
             "terminal": {
-                "path": "/usr/bin/gnome-terminal",
+                "path": "/usr/bin/cosmic-term",
                 "aliases": [
                     "terminal",
                     "shell",
@@ -48,18 +49,159 @@ class AppLauncher:
             },
         }
 
-    def open_app(self, spoken_text: str) -> bool:
-        spoken_text = spoken_text.lower()
+        self.google_triggers = [
+            "search google for",
+            "google",
+            "look up",
+            "search for"
+        ]
 
+    # ---------- Google Search ----------
+    def google_search(self, spoken_text: str) -> bool:
+        words = spoken_text.split()
+
+        if not words:
+            return False
+
+        if words[0] == "google":
+            query = " ".join(words[1:])
+        elif spoken_text.startswith("search for "):
+            query = spoken_text.replace("search for ", "", 1)
+        elif spoken_text.startswith("look up "):
+            query = spoken_text.replace("look up ", "", 1)
+        else:
+            return False
+
+        if not query:
+            print("[Launcher] No search query detected.")
+            return False
+
+        print(f"[Launcher] Google searching: {query}")
+        encoded_query = urllib.parse.quote_plus(query)
+
+        subprocess.Popen([
+            "xdg-open",
+            f"https://www.google.com/search?q={encoded_query}"
+        ])
+        return True
+
+    # ---------- Open App ----------
+    def open_app(self, spoken_text: str) -> str:
         for app_name, app_info in self.apps.items():
             for alias in app_info["aliases"]:
                 if alias in spoken_text:
                     print(f"[Launcher] Launching {app_name}...")
                     os.system(f'"{app_info["path"]}" &')
-                    return True
+                    return f"Opening {app_name}"
 
-        print(f"[Launcher] App not recognized in: {spoken_text}")
         return False
+
+    # ---------- Main Router ----------
+    def handle_command(self, spoken_text: str) -> bool:
+        spoken_text = spoken_text.lower()
+
+        # Priority 1: Google Search
+        if self.google_search(spoken_text):
+            return True
+
+        # Priority 2: App Launch
+        if self.open_app(spoken_text):
+            return True
+
+        print(f"[Launcher] Command not recognized: {spoken_text}")
+        return False
+
+
+
+
+# import subprocess
+# import shlex
+# import os
+#
+#
+# class AppLauncher:
+#     def __init__(self):
+#         self.apps = {
+#             "pycharm": {
+#                 "path": "/opt/pycharm/bin/pycharm.sh",
+#                 "aliases": [
+#                     "pycharm",
+#                     "charm",
+#                     "idea",
+#                     "jetbrains",
+#                     "open pycharm",
+#                     "launch pycharm",
+#                     "python"
+#                 ],
+#             },
+#             "vscode": {
+#                 "path": "/usr/bin/code",
+#                 "aliases": [
+#                     "vscode",
+#                     "visual studio code",
+#                     "code editor",
+#                     "launch vscode",
+#                     "code"
+#                 ],
+#             },
+#             "browser": {
+#                 "path": "/usr/bin/firefox",
+#                 "aliases": [
+#                     "firefox",
+#                     "browser",
+#                     "open browser",
+#                     "launch firefox",
+#                     "Bowser"
+#                 ],
+#             },
+#             "terminal": {
+#                 "path": "/usr/bin/cosmic-term",
+#                 "aliases": [
+#                     "terminal",
+#                     "shell",
+#                     "open terminal",
+#                     "launch terminal",
+#                 ],
+#             },
+#         }
+#
+#     def open_app(self, spoken_text: str) -> bool:
+#         spoken_text = spoken_text.lower()
+#
+#         for app_name, app_info in self.apps.items():
+#             for alias in app_info["aliases"]:
+#                 if alias in spoken_text:
+#                     print(f"[Launcher] Launching {app_name}...")
+#                     os.system(f'"{app_info["path"]}" &')
+#
+#                     google_triggers = ["search google for", "google", "look up", "search for"]
+#                     for trigger in google_triggers:
+#                         if trigger in spoken_text:
+#                             print(f'Google search for {spoken_text}')
+#                             # Extract query after the trigger phrase
+#                             query = spoken_text.split(trigger, 1)[1].strip()
+#                             if query:
+#                                 # speak(f"Searching Google for {query}")
+#                                 os.system(f"xdg-open 'https://www.google.com/search?q={query.replace(' ', '+')}'")
+#                                 return True
+#                     return True
+#
+#         print(f"[Launcher] App not recognized in: {spoken_text}")
+#         return False
+
+    # def google_search(self, command):
+    #     # Might be redundant
+    #     # Define Google search triggers
+    #     google_triggers = ["search google for", "google", "look up", "search for"]
+    #     for trigger in google_triggers:
+    #         if trigger in command:
+    #             # Extract query after the trigger phrase
+    #             query = command.split(trigger, 1)[1].strip()
+    #             if query:
+    #                 # speak(f"Searching Google for {query}")
+    #                 os.system(f"xdg-open 'https://www.google.com/search?q={query.replace(' ', '+')}'")
+    #                 return True
+    #     return False
 
 
 
