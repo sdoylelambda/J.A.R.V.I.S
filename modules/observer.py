@@ -5,6 +5,7 @@ from modules.stt.hybrid_stt import HybridSTT
 from modules.tts import TTSModule
 from modules.app_launcher import AppLauncher
 
+
 class Observer:
     def __init__(self, face_controller):
         with open("config.yaml") as f:
@@ -25,23 +26,30 @@ class Observer:
         self.mouth = TTSModule(use_mock=config["audio"].get("use_mock", False))
         self.launcher = AppLauncher()
         self.face = face_controller
+        self.paused = False
 
+        # Initial greeting
         self.face.set_state("thinking")
         print("[Observer] Listening and responding...")
-        self.mouth.speak(f"Hello sir, what can I do for you.")
+        self.mouth.speak("Hello sir, what can I do for you.")
 
     def listen_and_respond(self):
+        self.face.set_state("listening")
         while True:
-            self.face.set_state("listening")
+            # Set visual state
+            if self.paused:
+                self.face.set_state("sleeping")  # yellow, slow pulse/wobble
+            else:
+                self.face.set_state("listening")
+
             audio_path, duration = self.ears.listen()
 
             if not audio_path:
                 time.sleep(0.02)
                 continue
 
-            self.face.set_state("thinking")
-
             try:
+                # Transcribe audio
                 if duration < 5:
                     text = self.stt.transcribe_short(audio_path)
                 else:
@@ -50,11 +58,35 @@ class Observer:
                 if not text:
                     continue
 
+                text = text.lower()
+                print(f"[Heard]: {text}")
+
+                # Hotword to resume
+                if "jarvis" in text:
+                    if self.paused:
+                        self.paused = False
+                        self.mouth.speak("I'm back online.")
+                        self.face.set_state("listening")
+                    continue  # skip command execution this turn
+
+                # Hotword to pause
+                if "take a break" in text:
+                    self.paused = True
+                    self.mouth.speak("Going on a break.")
+                    self.face.set_state("sleeping")
+                    continue
+
+                if self.paused:
+                    continue  # skip commands while paused
+
+                # Execute normal commands
                 handled = self.launcher.handle_command(text)
                 if not handled:
+                    self.face.set_state("error")
                     self.mouth.speak("Command not recognized.")
                     self.listen_and_respond()
 
+                self.face.set_state("thinking")
                 print(f"[Heard]: {text}")
                 self.mouth.speak(f"I will: {text}")
 
@@ -62,8 +94,205 @@ class Observer:
                 print(f"[Error]: {e}")
                 self.face.set_state("error")
 
-            # Small sleep to give GUI time
-            time.sleep(0.03)
+            # Small sleep for CPU/GPU smoothness
+            time.sleep(0.01)
+
+
+
+
+
+# import yaml
+# import time
+# from modules.ears import Ears
+# from modules.stt.hybrid_stt import HybridSTT
+# from modules.tts import TTSModule
+# from modules.app_launcher import AppLauncher
+#
+# class Observer:
+#     # Sleep color (dark blue)
+#     SLEEP_COLOR = [0.0, 0.0, 0.0002, 1.0]
+#
+#     def __init__(self, face_controller):
+#         with open("config.yaml") as f:
+#             config = yaml.safe_load(f)
+#
+#         self.ears = Ears(
+#             samplerate=config["audio"]["samplerate"],
+#             mic_index=config["audio"].get("mic_index"),
+#             duration=7
+#         )
+#
+#         self.stt = HybridSTT(
+#             whisper_model="small",
+#             fw_model="small",
+#             use_gpu=config["system"].get("use_gpu", False)
+#         )
+#
+#         self.mouth = TTSModule(use_mock=config["audio"].get("use_mock", False))
+#         self.launcher = AppLauncher()
+#         self.face = face_controller
+#         self.paused = False
+#
+#         # Initial greeting
+#         self.face.set_state("thinking")
+#         print("[Observer] Listening and responding...")
+#         self.mouth.speak("Hello sir, what can I do for you.")
+#
+#     def listen_and_respond(self):
+#         while True:
+#             # Set visual state
+#             if self.paused:
+#                 # Dark blue sleep state
+#                 self.face.current_color = self.SLEEP_COLOR.copy()
+#             else:
+#                 self.face.set_state("listening")
+#
+#             audio_path, duration = self.ears.listen()
+#
+#             if not audio_path:
+#                 time.sleep(0.02)
+#                 continue
+#
+#             try:
+#                 if duration < 5:
+#                     text = self.stt.transcribe_short(audio_path)
+#                 else:
+#                     text = self.stt.transcribe_long(audio_path)
+#
+#                 if not text:
+#                     continue
+#
+#                 text = text.lower()
+#                 print(f"[Heard]: {text}")
+#
+#                 # Hotword to resume
+#                 if "jarvis" in text:
+#                     if self.paused:
+#                         self.paused = False
+#                         self.mouth.speak("I'm here.")
+#                         self.face.set_state("listening")
+#                     continue  # skip command execution this turn
+#
+#                 # Hotword to pause
+#                 if "take a break" in text:
+#                     self.paused = True
+#                     self.mouth.speak("Going on a break.")
+#                     # Start sleep color (dark blue)
+#                     self.face.current_color = self.SLEEP_COLOR.copy()
+#                     continue
+#
+#                 if self.paused:
+#                     continue  # skip commands while paused
+#
+#                 # Execute normal commands
+#                 handled = self.launcher.handle_command(text)
+#                 if not handled:
+#                     self.mouth.speak("Command not recognized.")
+#                     self.listen_and_respond()
+#
+#                 print(f"[Heard]: {text}")
+#                 self.mouth.speak(f"I will: {text}")
+#
+#             except Exception as e:
+#                 print(f"[Error]: {e}")
+#                 self.face.set_state("error")
+#
+#             # Small sleep for CPU/GPU smoothness
+#             time.sleep(0.01)
+
+
+
+
+
+
+# import yaml
+# import time
+# from modules.ears import Ears
+# from modules.stt.hybrid_stt import HybridSTT
+# from modules.tts import TTSModule
+# from modules.app_launcher import AppLauncher
+#
+# class Observer:
+#     def __init__(self, face_controller):
+#         with open("config.yaml") as f:
+#             config = yaml.safe_load(f)
+#
+#         self.ears = Ears(
+#             samplerate=config["audio"]["samplerate"],
+#             mic_index=config["audio"].get("mic_index"),
+#             duration=7
+#         )
+#
+#         self.stt = HybridSTT(
+#             whisper_model="small",
+#             fw_model="small",
+#             use_gpu=config["system"].get("use_gpu", False)
+#         )
+#
+#         self.mouth = TTSModule(use_mock=config["audio"].get("use_mock", False))
+#         self.launcher = AppLauncher()
+#         self.face = face_controller
+#         self.paused = False
+#
+#         self.face.set_state("thinking")
+#         print("[Observer] Listening and responding...")
+#         self.mouth.speak(f"Hello sir, what can I do for you.")
+#
+#     def listen_and_respond(self):
+#         while True:
+#             self.face.set_state("listening")
+#             audio_path, duration = self.ears.listen()
+#
+#             if not audio_path:
+#                 time.sleep(0.02)
+#                 continue
+#
+#             self.face.set_state("thinking")
+#
+#             try:
+#                 if duration < 5:
+#                     text = self.stt.transcribe_short(audio_path)
+#                 else:
+#                     text = self.stt.transcribe_long(audio_path)
+#
+#                 if not text:
+#                     continue
+#
+#                 # Hotword to resume
+#                 if "jarvis" in text:
+#                     if self.paused:
+#                         self.paused = False
+#                         self.mouth.speak("I'm back online.")
+#                         if self.face:
+#                             self.face.set_state("listening")
+#                     continue  # don't execute commands this turn
+#
+#                 # Hotword to pause
+#                 if "take a break" in text:
+#                     self.paused = True
+#                     self.mouth.speak("Going on a break.")
+#                     if self.face:
+#                         self.face.set_state("error")  # or any color to indicate pause
+#                     continue
+#
+#                 if self.paused:
+#                     # If paused, ignore commands
+#                     continue
+#
+#                 handled = self.launcher.handle_command(text)
+#                 if not handled:
+#                     self.mouth.speak("Command not recognized.")
+#                     self.listen_and_respond()
+#
+#                 print(f"[Heard]: {text}")
+#                 self.mouth.speak(f"I will: {text}")
+#
+#             except Exception as e:
+#                 print(f"[Error]: {e}")
+#                 self.face.set_state("error")
+#
+#             # Small sleep to give GUI time
+#             time.sleep(0.03)
 
 
 
