@@ -43,8 +43,12 @@ class Observer:
                 continue
 
             print(f"[Heard]: {text}")
-            self.launcher.open_app(text)
-            self.mouth.speak(text)
+            self.mouth.speak(f"I will: {text}")
+
+            handled = self.launcher.handle_command(text)
+
+            if not handled:
+                self.mouth.speak("Command not recognized.")
 
 
 

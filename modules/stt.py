@@ -1,6 +1,6 @@
 import whisper
 import os
-import speech_recognition as sr
+import speech_recognition as sr  # Remove this if possible - google api - perhaps whisper instead
 import sounddevice as sd
 from scipy.io.wavfile import write
 
