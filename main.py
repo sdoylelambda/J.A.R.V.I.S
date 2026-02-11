@@ -1,9 +1,15 @@
+from modules.face import FaceController
 from modules.observer import Observer
-
+import threading
 
 if __name__ == "__main__":
-    observer = Observer()
-    observer.listen_and_respond()
+    face = FaceController()
+
+    observer_thread = threading.Thread(target=lambda: Observer(face).listen_and_respond(), daemon=True)
+    observer_thread.start()
+
+    face.run()
+
 
 
 
