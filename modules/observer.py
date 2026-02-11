@@ -61,15 +61,15 @@ class Observer:
                 text = text.lower()
                 print(f"[Heard]: {text}")
 
-                # Hotword to resume
-                if "jarvis" in text:
+                # Hot word to resume
+                if "jarvis" in text or "you there" in text:
                     if self.paused:
                         self.paused = False
                         self.mouth.speak("I'm back online.")
                         self.face.set_state("listening")
                     continue  # skip command execution this turn
 
-                # Hotword to pause
+                # Hot word to pause
                 if "take a break" in text:
                     self.paused = True
                     self.mouth.speak("Going on a break.")
