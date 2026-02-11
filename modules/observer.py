@@ -34,7 +34,7 @@ class Observer:
             audio_path, duration = self.ears.listen()
 
             if not audio_path:
-                time.sleep(0.01)
+                time.sleep(0.02)
                 continue
 
             self.face.set_state("thinking")
@@ -60,7 +60,7 @@ class Observer:
                 self.face.set_state("error")
 
             # Small sleep to give GUI time
-            time.sleep(0.01)
+            time.sleep(0.03)
 
 
 
