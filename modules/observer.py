@@ -133,7 +133,6 @@ class Observer:
 #
 #
 #
-#
 # # observer.py
 # # import yaml
 # # from modules.ears import Ears
