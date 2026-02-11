@@ -26,9 +26,11 @@ class Observer:
         self.launcher = AppLauncher()
         self.face = face_controller
 
-    def listen_and_respond(self):
+        self.face.set_state("thinking")
         print("[Observer] Listening and responding...")
+        self.mouth.speak(f"Hello sir, what can I do for you.")
 
+    def listen_and_respond(self):
         while True:
             self.face.set_state("listening")
             audio_path, duration = self.ears.listen()
@@ -48,12 +50,13 @@ class Observer:
                 if not text:
                     continue
 
-                print(f"[Heard]: {text}")
-                self.mouth.speak(f"I will: {text}")
-
                 handled = self.launcher.handle_command(text)
                 if not handled:
                     self.mouth.speak("Command not recognized.")
+                    self.listen_and_respond()
+
+                print(f"[Heard]: {text}")
+                self.mouth.speak(f"I will: {text}")
 
             except Exception as e:
                 print(f"[Error]: {e}")
