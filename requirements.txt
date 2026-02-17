@@ -17,3 +17,5 @@ faster-whisper
 vispy
 threading
 numpy
+playwright
+playwright_stealth

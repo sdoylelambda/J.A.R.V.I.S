@@ -1,32 +1,41 @@
 import yaml
 import time
+from queue import Queue
 from modules.ears import Ears
 from modules.stt.hybrid_stt import HybridSTT
 from modules.tts import TTSModule
 from modules.app_launcher import AppLauncher
+from modules.window_controller import WindowController
 
 
 class Observer:
-    def __init__(self, face_controller):
+    def __init__(self, face, window_controller, launcher: AppLauncher):
         with open("config.yaml") as f:
             config = yaml.safe_load(f)
 
+        # Audio input
         self.ears = Ears(
             samplerate=config["audio"]["samplerate"],
             mic_index=config["audio"].get("mic_index"),
             duration=7
         )
 
+        # STT
         self.stt = HybridSTT(
             whisper_model="small",
             fw_model="small",
             use_gpu=config["system"].get("use_gpu", False)
         )
 
+        # Core controllers
+        self.launcher = launcher
+        self.window_controller = window_controller
+        self.face = face
         self.mouth = TTSModule(use_mock=config["audio"].get("use_mock", False))
-        self.launcher = AppLauncher()
-        self.face = face_controller
         self.paused = False
+
+        # Browser queue for async processing
+        self.browser_queue: Queue = Queue()
 
         # Initial greeting
         self.face.set_state("thinking")
@@ -35,21 +44,29 @@ class Observer:
 
     def listen_and_respond(self):
         self.face.set_state("listening")
+
         while True:
-            # Set visual state
             if self.paused:
-                self.face.set_state("sleeping")  # yellow, slow pulse/wobble
+                self.face.set_state("sleeping")
+                time.sleep(0.1)
+                continue
             else:
                 self.face.set_state("listening")
 
-            audio_path, duration = self.ears.listen()
-
-            if not audio_path:
+            # ------------------------
+            # Record audio
+            # ------------------------
+            result = self.ears.listen()
+            if not result or not isinstance(result, tuple):
                 time.sleep(0.02)
                 continue
 
+            audio_path, duration = result
+
+            # ------------------------
+            # Transcribe
+            # ------------------------
             try:
-                # Transcribe audio
                 if duration < 5:
                     text = self.stt.transcribe_short(audio_path)
                 else:
@@ -58,18 +75,19 @@ class Observer:
                 if not text:
                     continue
 
-                text = text.lower()
+                text = text.lower().strip()
                 print(f"[Heard]: {text}")
 
-                # Hot word to resume
+                # ------------------------
+                # Hotwords
+                # ------------------------
                 if "jarvis" in text or "you there" in text:
                     if self.paused:
                         self.paused = False
                         self.mouth.speak("I'm back online.")
                         self.face.set_state("listening")
-                    continue  # skip command execution this turn
+                    continue
 
-                # Hot word to pause
                 if "take a break" in text:
                     self.paused = True
                     self.mouth.speak("Going on a break.")
@@ -77,25 +95,400 @@ class Observer:
                     continue
 
                 if self.paused:
-                    continue  # skip commands while paused
+                    continue
 
-                # Execute normal commands
+                # ------------------------
+                # Command routing
+                # ------------------------
+                handled = False
+
+                # 1️⃣ Send command to AppLauncher (browser or native apps)
                 handled = self.launcher.handle_command(text)
-                if not handled:
+
+                # Update WindowController if not browser
+                if handled:
+                    current_app = self.launcher.get_current_app()
+                    if current_app and current_app != "browser":
+                        self.window_controller.update_active_window(current_app)
+
+                # ------------------------
+                # Feedback
+                # ------------------------
+                if handled:
+                    self.face.set_state("listening")
+                else:
                     self.face.set_state("error")
                     self.mouth.speak("Command not recognized.")
-                    self.listen_and_respond()
-
-                self.face.set_state("thinking")
-                print(f"[Heard]: {text}")
-                self.mouth.speak(f"I will: {text}")
+                    time.sleep(0.2)
+                    self.face.set_state("listening")
 
             except Exception as e:
                 print(f"[Error]: {e}")
                 self.face.set_state("error")
 
-            # Small sleep for CPU/GPU smoothness
+            # Small sleep to prevent CPU overload
             time.sleep(0.01)
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+# import yaml
+# import time
+# from modules.ears import Ears
+# from modules.stt.hybrid_stt import HybridSTT
+# from modules.tts import TTSModule
+# from modules.app_launcher import AppLauncher
+# from modules.window_controller import WindowController
+#
+#
+# class Observer:
+#     def __init__(self, face, window_controller, launcher, browser_queue):
+#         with open("config.yaml") as f:
+#             config = yaml.safe_load(f)
+#
+#         self.ears = Ears(
+#             samplerate=config["audio"]["samplerate"],
+#             mic_index=config["audio"].get("mic_index"),
+#             duration=7
+#         )
+#
+#         self.stt = HybridSTT(
+#             whisper_model="small",
+#             fw_model="small",
+#             use_gpu=config["system"].get("use_gpu", False)
+#         )
+#
+#         self.launcher = launcher
+#         self.window_controller = window_controller
+#         self.face = face
+#         self.browser_queue = browser_queue
+#         self.mouth = TTSModule(use_mock=config["audio"].get("use_mock", False))
+#         self.paused = False
+#
+#         # Initial greeting
+#         self.face.set_state("thinking")
+#         print("[Observer] Listening and responding...")
+#         self.mouth.speak("Hello sir, what can I do for you.")
+#
+#     def listen_and_respond(self):
+#         self.face.set_state("listening")
+#         while True:
+#             if self.paused:
+#                 self.face.set_state("sleeping")
+#                 time.sleep(0.1)
+#                 continue
+#             else:
+#                 self.face.set_state("listening")
+#
+#             audio_path, duration = self.ears.listen()
+#             if not audio_path:
+#                 time.sleep(0.02)
+#                 continue
+#
+#             try:
+#                 if duration < 5:
+#                     text = self.stt.transcribe_short(audio_path)
+#                 else:
+#                     text = self.stt.transcribe_long(audio_path)
+#
+#                 if not text:
+#                     continue
+#
+#                 text = text.lower()
+#                 print(f"[Heard]: {text}")
+#
+#                 # ------------------------
+#                 # Hot words
+#                 # ------------------------
+#                 if "jarvis" in text or "you there" in text:
+#                     if self.paused:
+#                         self.paused = False
+#                         self.mouth.speak("I'm back online.")
+#                         self.face.set_state("listening")
+#                     continue
+#
+#                 if "take a break" in text:
+#                     self.paused = True
+#                     self.mouth.speak("Going on a break.")
+#                     self.face.set_state("sleeping")
+#                     continue
+#
+#                 if self.paused:
+#                     continue
+#
+#                 # ------------------------
+#                 # Command routing
+#                 # ------------------------
+#                 handled = False
+#
+#                 # 1️⃣ Browser commands go to queue
+#                 if any(trigger in text for trigger in self.launcher.browser_triggers):
+#                     self.browser_queue.put(text)
+#                     handled = True
+#
+#                 # 2️⃣ Other app/window commands handled immediately
+#                 if not handled:
+#                     handled = self.launcher.handle_command(text)
+#                     if handled:
+#                         current_app = self.launcher.get_current_app()
+#                         if current_app and current_app != "browser":
+#                             self.window_controller.update_active_window(current_app)
+#
+#                 # ------------------------
+#                 # Feedback
+#                 # ------------------------
+#                 if handled:
+#                     self.face.set_state("listening")
+#                 else:
+#                     self.face.set_state("error")
+#                     self.mouth.speak("Command not recognized.")
+#                     time.sleep(0.2)
+#                     self.face.set_state("listening")
+#
+#             except Exception as e:
+#                 print(f"[Error]: {e}")
+#                 self.face.set_state("error")
+#
+#             time.sleep(0.01)
+
+    # def listen_and_respond(self):
+    #     self.face.set_state("listening")
+    #     while True:
+    #         # Set visual state
+    #         if self.paused:
+    #             self.face.set_state("sleeping")
+    #             time.sleep(0.1)
+    #             continue
+    #         else:
+    #             self.face.set_state("listening")
+    #
+    #         audio_path, duration = self.ears.listen()
+    #         if not audio_path:
+    #             time.sleep(0.02)
+    #             continue
+    #
+    #         try:
+    #             # Transcribe audio
+    #             if duration < 5:
+    #                 text = self.stt.transcribe_short(audio_path)
+    #             else:
+    #                 text = self.stt.transcribe_long(audio_path)
+    #
+    #             if not text:
+    #                 continue
+    #
+    #             text = text.lower()
+    #             print(f"[Heard]: {text}")
+    #
+    #             # Hot word to resume
+    #             if "jarvis" in text or "you there" in text:
+    #                 if self.paused:
+    #                     self.paused = False
+    #                     self.mouth.speak("I'm back online.")
+    #                     self.face.set_state("listening")
+    #                 continue  # skip command execution this turn
+    #
+    #             # Hot word to pause
+    #             if "take a break" in text:
+    #                 self.paused = True
+    #                 self.mouth.speak("Going on a break.")
+    #                 self.face.set_state("sleeping")
+    #                 continue
+    #
+    #             if self.paused:
+    #                 continue  # skip commands while paused
+    #
+    #             # ------------------------
+    #             # Command Handling
+    #             # ------------------------
+    #             handled = False
+    #             launched_app = None
+    #
+    #             # 1️⃣ Let AppLauncher handle EVERYTHING first
+    #             handled = self.launcher.handle_command(text)
+    #
+    #             # If launcher opened a native app, update window controller
+    #             current_app = self.launcher.get_current_app()
+    #             if current_app and current_app != "browser":
+    #                 self.window_controller.update_active_window(current_app)
+    #
+    #             # # ------------------------
+    #             # # Command Handling
+    #             # # ------------------------
+    #             # handled = False
+    #             #
+    #             # # 1️⃣ Try launching apps
+    #             # launched_app = self.launcher.open_app(text)
+    #             # if launched_app:
+    #             #     handled = True
+    #             #     self.window_controller.update_active_window(launched_app)
+    #             #
+    #             # # 2️⃣ Try smart window interaction
+    #             # if not handled:
+    #             #     handled = self.window_controller.send_command(text)
+    #
+    #             # ------------------------
+    #             # Feedback
+    #             # ------------------------
+    #             if handled:
+    #                 # Speak confirmation only for app launch or meaningful commands
+    #                 if launched_app:
+    #                     self.mouth.speak(f"I will open {launched_app}.")
+    #                 # Otherwise, for shortcuts like refresh, avoid repeating
+    #                 self.face.set_state("listening")
+    #             else:
+    #                 self.face.set_state("error")
+    #                 self.mouth.speak("Command not recognized.")
+    #                 time.sleep(0.2)
+    #                 self.face.set_state("listening")
+    #
+    #         except Exception as e:
+    #             print(f"[Error]: {e}")
+    #             self.face.set_state("error")
+    #
+    #             # Small sleep for CPU/GPU smoothness
+    #         time.sleep(0.01)
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+# import yaml
+# import time
+# from modules.ears import Ears
+# from modules.stt.hybrid_stt import HybridSTT
+# from modules.tts import TTSModule
+# from modules.app_launcher import AppLauncher
+# from modules.window_controller import WindowController
+#
+#
+# class Observer:
+#     def __init__(self, face_controller, window_controller):
+#         with open("config.yaml") as f:
+#             config = yaml.safe_load(f)
+#
+#         self.ears = Ears(
+#             samplerate=config["audio"]["samplerate"],
+#             mic_index=config["audio"].get("mic_index"),
+#             duration=7
+#         )
+#
+#         self.stt = HybridSTT(
+#             whisper_model="small",
+#             fw_model="small",
+#             use_gpu=config["system"].get("use_gpu", False)
+#         )
+#
+#         self.mouth = TTSModule(use_mock=config["audio"].get("use_mock", False))
+#         self.launcher = AppLauncher()
+#         self.window_controller = window_controller
+#         self.face = face_controller
+#         self.paused = False
+#
+#         # Initial greeting
+#         self.face.set_state("thinking")
+#         print("[Observer] Listening and responding...")
+#         self.mouth.speak("Hello sir, what can I do for you.")
+#
+#     def listen_and_respond(self):
+#         self.face.set_state("listening")
+#         while True:
+#             # Set visual state
+#             if self.paused:
+#                 self.face.set_state("sleeping")  # yellow, slow pulse/wobble
+#             else:
+#                 self.face.set_state("listening")
+#
+#             audio_path, duration = self.ears.listen()
+#
+#             if not audio_path:
+#                 time.sleep(0.02)
+#                 continue
+#
+#             try:
+#                 # Transcribe audio
+#                 if duration < 5:
+#                     text = self.stt.transcribe_short(audio_path)
+#                 else:
+#                     text = self.stt.transcribe_long(audio_path)
+#
+#                 if not text:
+#                     continue
+#
+#                 text = text.lower()
+#                 print(f"[Heard]: {text}")
+#
+#                 # Hot word to resume
+#                 if "jarvis" in text or "you there" in text:
+#                     if self.paused:
+#                         self.paused = False
+#                         self.mouth.speak("I'm back online.")
+#                         self.face.set_state("listening")
+#                     continue  # skip command execution this turn
+#
+#                 # Hot word to pause
+#                 if "take a break" in text:
+#                     self.paused = True
+#                     self.mouth.speak("Going on a break.")
+#                     self.face.set_state("sleeping")
+#                     continue
+#
+#                 if self.paused:
+#                     continue  # skip commands while paused
+#
+#                 # ------------------------
+#                 # Command Routing
+#                 # ------------------------
+#
+#                 # 1️⃣ Try window interaction first
+#                 handled = self.window_controller.send_command(text)
+#
+#                 # 2️⃣ If not handled, try launching apps
+#                 if not handled:
+#                     handled = self.launcher.handle_command(text)
+#
+#                 # ------------------------
+#                 # Feedback
+#                 # ------------------------
+#                 if handled:
+#                     self.mouth.speak(f"I will: {text}")
+#                     self.face.set_state("listening")
+#                 else:
+#                     self.face.set_state("error")
+#                     self.mouth.speak("Command not recognized.")
+#                     time.sleep(0.3)
+#                     self.face.set_state("listening")
+#
+#             except Exception as e:
+#                 print(f"[Error]: {e}")
+#                 self.face.set_state("error")
+#
+#             # Small sleep for CPU/GPU smoothness
+#             time.sleep(0.01)
 
 
 

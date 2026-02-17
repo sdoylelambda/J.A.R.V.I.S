@@ -28,7 +28,7 @@ class FaceController:
         self.pulse_dir = 1
         self.z_wobble = 0.0
         self.z_dir = 1
-        self.current_state = "listening"
+        self.current_state = "thinking"
 
         # SceneCanvas
         self.canvas = scene.SceneCanvas(keys='interactive', size=(600, 600),
