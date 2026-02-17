@@ -31,7 +31,7 @@ class FaceController:
         self.current_state = "listening"
 
         # SceneCanvas
-        self.canvas = scene.SceneCanvas(keys='interactive', size=(600, 600),
+        self.canvas = scene.SceneCanvas(keys='interactive', size=(250, 250),
                                         show=True, title="Jarvis AI Face")
         self.view = self.canvas.central_widget.add_view()
         self.view.camera = scene.cameras.TurntableCamera(fov=45, distance=4)

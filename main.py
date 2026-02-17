@@ -1,11 +1,14 @@
 from modules.face import FaceController
+from modules.window_controller import WindowController
 from modules.observer import Observer
 import threading
 
+
 if __name__ == "__main__":
     face = FaceController()
+    window_controller = WindowController()
 
-    observer_thread = threading.Thread(target=lambda: Observer(face).listen_and_respond(), daemon=True)
+    observer_thread = threading.Thread(target=lambda: Observer(face, window_controller).listen_and_respond(), daemon=True)
     observer_thread.start()
 
     face.run()
