@@ -88,7 +88,7 @@ class Observer:
 
                 self.face.set_state("thinking")
                 print(f"[Heard]: {text}")
-                self.mouth.speak(f"I will: {text}")
+                self.mouth.speak(f"I have: {text}")
 
             except Exception as e:
                 print(f"[Error]: {e}")

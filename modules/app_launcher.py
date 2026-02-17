@@ -49,12 +49,12 @@ class AppLauncher:
             },
         }
 
-        self.google_triggers = [
-            "search google for",
-            "google",
-            "look up",
-            "search for"
-        ]
+        # self.google_triggers = [
+        #     "search google for",
+        #     "google",
+        #     "look up",
+        #     "search for"
+        # ]
 
     # ---------- Google Search ----------
     def google_search(self, spoken_text: str) -> bool:
