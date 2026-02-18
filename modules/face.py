@@ -15,8 +15,8 @@ class FaceController:
 
     def __init__(self):
         self.state_queue = Queue()
-        self.current_color = self.COLORS["listening"].copy()
-        self.target_color = self.COLORS["listening"].copy()
+        self.current_color = self.COLORS["thinking"].copy()
+        self.target_color = self.COLORS["thinking"].copy()
         self.n_points = 400
         self.points = self.generate_points(self.n_points)
 

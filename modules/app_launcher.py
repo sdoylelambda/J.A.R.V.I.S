@@ -95,7 +95,7 @@ class AppLauncher:
     def open_app(self, spoken_text: str) -> str:
         for app_name, app_info in self.apps.items():
             for alias in app_info["aliases"]:
-                if alias in spoken_text:
+                if alias in spoken_text:      #        Why is the word in the sentence, but doesn't execute?
                     print(f"[Launcher] Launching {app_name}...")
                     os.system(f'"{app_info["path"]}" &')
                     self.current_app = app_name
