@@ -7,7 +7,8 @@ from modules.app_launcher import AppLauncher
 
 
 class Observer:
-    def __init__(self, face_controller):
+    def __init__(self, face_controller, window_controller):
+        self.window_controller = window_controller
         with open("config.yaml") as f:
             config = yaml.safe_load(f)
 
@@ -24,7 +25,7 @@ class Observer:
         )
 
         self.mouth = TTSModule(use_mock=config["audio"].get("use_mock", False))
-        self.launcher = AppLauncher()
+        self.launcher = AppLauncher(window_controller)
         self.face = face_controller
         self.paused = False
 
@@ -81,6 +82,11 @@ class Observer:
 
                 # Execute normal commands
                 handled = self.launcher.handle_command(text)
+                if handled:
+                    current_app = self.launcher.get_current_app()
+                    if current_app and current_app != "browser":
+                        self.window_controller.update_active_window(current_app)
+
                 if not handled:
                     self.face.set_state("error")
                     self.mouth.speak("Command not recognized.")
