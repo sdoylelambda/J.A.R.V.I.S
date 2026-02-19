@@ -32,7 +32,7 @@ class FaceController:
 
         # SceneCanvas
         self.canvas = scene.SceneCanvas(keys='interactive', size=(250, 250),
-                                        show=True, title="Jarvis AI Face")
+                                        show=True, title="Jarvis's AI Face")
         self.view = self.canvas.central_widget.add_view()
         self.view.camera = scene.cameras.TurntableCamera(fov=45, distance=4)
         self.scatter = scene.visuals.Markers(parent=self.view.scene)
