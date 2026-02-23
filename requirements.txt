@@ -21,3 +21,5 @@ pyaudio
 webrtcvad
 scipy
 webrtcvad-wheels
+piper
+playwright
