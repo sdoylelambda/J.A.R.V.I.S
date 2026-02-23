@@ -59,8 +59,9 @@ class Observer:
                         self.paused = False
                         self.face.set_state("thinking")
                         t1 = time.time()
-                        await asyncio.to_thread(self.mouth.speak, "I'm back online.")
-                        print(f"[Timing] TTS: {time.time() - t1:.2f}s")
+                        await asyncio.to_thread(self.mouth.speak, "For you sir, always.")
+                        if self.debug:
+                            print(f"[Timing] TTS: {time.time() - t1:.2f}s")
                         self.face.set_state("listening")
                     continue
 
@@ -70,7 +71,8 @@ class Observer:
                     self.face.set_state("sleeping")
                     t1 = time.time()
                     await asyncio.to_thread(self.mouth.speak, "Going on a break.")
-                    print(f"[Timing] TTS: {time.time() - t1:.2f}s")
+                    if self.debug:
+                        print(f"[Timing] TTS: {time.time() - t1:.2f}s")
                     continue
 
                 if self.paused:
@@ -92,8 +94,10 @@ class Observer:
                         self.window_controller.update_active_window(current_app)
                     await asyncio.to_thread(self.mouth.speak, f"I have: {text}")
                 else:
+                    self.face.set_state("error")
                     await asyncio.to_thread(self.mouth.speak, "Command not recognized.")
-                print(f"[Timing] TTS: {time.time() - t1:.2f}s")
+                if self.debug:
+                    print(f"[Timing] TTS: {time.time() - t1:.2f}s")
 
                 self.face.set_state("listening")
 

@@ -2,6 +2,7 @@ from vispy import scene, app
 import numpy as np
 from queue import Queue
 
+
 class FaceController:
     COLORS = {
         "listening": np.array([0, 0, 1, 1], dtype=np.float32),
@@ -73,6 +74,8 @@ class FaceController:
             if state == "listening":
                 self.target_radius = self.base_radius
             elif state == "thinking":
+                self.target_radius = self.base_radius * 1.1
+            elif state == "error":
                 self.target_radius = self.base_radius * 1.1
             elif state == "sleeping":
                 self.target_radius = self.base_radius * 0.5  # exactly half-size
