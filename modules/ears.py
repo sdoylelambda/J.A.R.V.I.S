@@ -97,9 +97,14 @@ class Ears:
 
         self.noise_floor = float(np.mean(samples))
 
-        # dynamic thresholds
-        self.start_threshold = self.noise_floor * 3
-        self.stop_threshold = self.noise_floor * 1.5
+        # If noise floor is suspiciously high, fall back to static values
+        if self.noise_floor > 5000:
+            print(f"[Ears] WARNING: Noise floor too high ({int(self.noise_floor)}), using static thresholds")
+            self.start_threshold = 1500
+            self.stop_threshold = 800
+        else:
+            self.start_threshold = self.noise_floor * 3.0
+            self.stop_threshold = self.noise_floor * 1.5
 
         print(f"[Ears] Noise floor={int(self.noise_floor)} "
               f"start={int(self.start_threshold)} "

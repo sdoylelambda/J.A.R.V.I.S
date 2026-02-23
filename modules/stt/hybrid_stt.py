@@ -26,14 +26,18 @@ class HybridSTT:
 
     def transcribe(self, audio_bytes, duration):
         """Route to whisper or faster-whisper based on clip duration."""
+        if duration < 0.3:
+            print("[STT] Audio too short, skipping.")
+            return ""
+
         audio_np = self._to_float32(audio_bytes)
 
         if duration > SHORT_THRESHOLD_SECONDS:
             print(f"[STT] Using Whisper ({duration:.1f}s)")
-            return self._transcribe_short(audio_np)
+            return self._transcribe_long(audio_np)
         else:
             print(f"[STT] Using Faster-Whisper ({duration:.1f}s)")
-            return self._transcribe_long(audio_np)
+            return self._transcribe_short(audio_np)
 
     def _transcribe_short(self, audio_np):
         transcribe_time = time.time()

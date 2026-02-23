@@ -1,5 +1,8 @@
 import os
+import subprocess
 from modules.browser_controller import BrowserController
+import urllib
+import urllib.parse
 
 
 class AppLauncher:
@@ -51,9 +54,8 @@ class AppLauncher:
             },
         }
 
-
     # ---------- Google Search ----------
-    def google_search(self, command):
+    def google_search(self, command) -> bool:
         google_triggers = ["search google for", "google", "look up", "search for"]
         for trigger in google_triggers:
             if trigger in command:
@@ -61,17 +63,22 @@ class AppLauncher:
                 query = command.split(trigger, 1)[1].strip()
                 if query:
                     # speak(f"Searching Google for {query}")
-                    os.system(f"xdg-open 'https://www.google.com/search?q={query.replace(' ', '+')}'")
+                    url = f"https://www.google.com/search?q={urllib.parse.quote_plus(query)}"
+                    subprocess.Popen(["xdg-open", url])
                     return True
         return False
 
     # ---------- Open App ----------
-    def open_app(self, spoken_text: str):
+    def open_app(self, spoken_text: str) -> str | bool:
         for app_name, app_info in self.apps.items():
             for alias in app_info["aliases"]:
-                if alias in spoken_text:      #        Why is the word in the sentence, but doesn't execute?
-                    print(f"[Launcher] Launching {app_name}...")
-                    os.system(f'"{app_info["path"]}" &')
+                if alias in spoken_text:
+                    try:
+                        subprocess.Popen([app_info["path"]])
+                        print(f"[Launcher] Launching {app_name}...")
+                    except Exception as e:
+                        print(f"[Launcher] Failed to launch {app_name}: {e}")
+                        return False
                     self.current_app = app_name
                     self.window_controller.update_active_window(app_name)
                     return f"Opening {app_name}"
