@@ -100,35 +100,43 @@ class Brain:
 
     # ─── intent classification ────────────────────────────────────────────
 
-    def classify(self, command: str) -> dict:
-        """Fast intent classification via phi3:mini."""
-        system = """You are an intent classifier. Return JSON only, no explanation.
-            Output format: {"intent": "simple|complex|code|api", "route": "orchestrator|code|claude|gemini"}
-            simple = basic file/app/system task
-            complex = multi-step planning needed
-            code = code generation/editing
-            api = needs real-time info or long context"""
+    def quick_answer(self, command: str) -> dict | None:
+        """
+        phi3 attempts to handle the command directly.
+        Returns a result dict if it can handle it, None if it needs Mistral.
+        """
+        system = """You are Jarvis, a witty and personable AI assistant with a dry British wit, 
+        inspired by Iron Man's Jarvis. Speak naturally and conversationally, never robotic.
+        If you can answer or handle this command confidently and completely, do so.
+        If it requires multi-step computer tasks, file operations, or code generation, respond with exactly: ESCALATE
+        For simple questions, facts, or conversation respond in one sentence max.
+        Do not explain yourself. Do not say ESCALATE unless you truly cannot handle it. 
+        Reply as short as possible without losing important information."""
 
         result = self.query(command, model_key="classifier", system=system)
-        try:
-            return json.loads(result)
-        except json.JSONDecodeError:
-            return {"intent": "simple", "route": "orchestrator"}  # safe fallback
+        result = result.strip()
+
+        if "ESCALATE" in result:
+            return None  # pass to Mistral
+
+        return {"summary": result, "steps": []}
 
     # ─── plan creation ────────────────────────────────────────────────────
 
     def create_plan(self, command: str) -> dict:
-        """Orchestrator builds a structured execution plan."""
         system = """You are Jarvis, an AI assistant that controls a computer.
             Given a command, return a JSON execution plan.
             Output format:
             {
               "summary": "plain english summary of what you will do",
+              "route": "local|claude|gemini",
               "steps": [
-                {"action": "tool_name", "params": {...}},
-                ...
+                {"action": "tool_name", "params": {...}}
               ]
             }
+            Set route to "claude" for long document analysis or complex reasoning.
+            Set route to "gemini" for anything needing real-time or current information.
+            Otherwise route is "local".
             Available tools: create_file, create_dir, write_code, open_app, read_file,
             run_script, web_search, browser_navigate, list_dir, delete_file
             Only return JSON. No explanation."""
@@ -137,20 +145,36 @@ class Brain:
         try:
             return json.loads(result)
         except json.JSONDecodeError:
+            return {"summary": result, "steps": [], "route": "local"}
             return {"summary": result, "steps": []}
 
     # ─── main entry point ─────────────────────────────────────────────────
 
     def process(self, command: str) -> dict:
-        """Classify then route to the right model."""
-        classification = self.classify(command)
-        route = classification.get("route", "orchestrator")
+        """
+        Layered routing:
+        1. phi3 tries to handle it directly
+        2. Mistral handles complex/multi-step
+        3. API models as last resort
+        """
+        # layer 1 — phi3 quick answer
+        result = self.quick_answer(command)
+        if result:
+            print("[Brain] Handled by phi3")
+            return result
 
+        # layer 2 — mistral full plan
+        print("[Brain] Escalating to Mistral")
+        plan = self.create_plan(command)
+
+        # layer 3 — api escalation if mistral flags it
+        route = plan.get("route")
         if route in ("claude", "gemini"):
+            print(f"[Brain] Escalating to {route}")
             response = self.query(command, model_key=route)
             return {"summary": response, "steps": []}
-        else:
-            return self.create_plan(command)
+
+        return plan
 
     # ─── memory / RAG (step 11) ───────────────────────────────────────────
 
