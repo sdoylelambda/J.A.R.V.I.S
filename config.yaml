@@ -69,6 +69,12 @@ audio:
   mic_index: null
   use_mock: false
   calibration_interval: 30
+  # give up waiting to START speaking after 3s
+  pre_speech_timeout: 3.0
+  # hard cap — allows long commands
+  max_speech_duration: 25.0
+  # wait 1.5s of silence before stopping mid-speech
+  silence_seconds: 1.5
 
 transcription:
   engine: faster-whisper

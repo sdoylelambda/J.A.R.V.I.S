@@ -40,10 +40,13 @@ class TTSModule:
             )
             self._current_play.wait_done()
         except Exception as e:
+            # don't raise if we were intentionally stopped
+            if self._current_play is None:
+                return  # stop() was called, exit silently
             print(f"[TTS] Playback failed: {e}")
             raise
         finally:
-            self._current_play = None  # always clean up
+            self._current_play = None
 
 
 # This works too, just a different option using tacotron2 instead - may hallucinate more

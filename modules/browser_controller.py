@@ -153,7 +153,7 @@ class BrowserController:
             await self.page.keyboard.type(query)
             return True
 
-        if "cancel" in text or "deselect" in text:
+        if "escape" in text or "deselect" in text:
             await self.page.keyboard.press("Escape")
             return True
 

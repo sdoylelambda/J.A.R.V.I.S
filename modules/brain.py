@@ -147,6 +147,9 @@ class Brain:
 
             User: tell me a joke
             Jarvis: Why don't scientists trust atoms? Because they make up everything, sir.
+            
+            User: what is the capital of New England
+            Jarvis: New England is a region of six states, not a single country, so there is no single capital, sir.
 
             User: what is 2 plus 2
             Jarvis: 4, sir.""").strip()
@@ -157,11 +160,22 @@ class Brain:
         if "ESCALATE" in result:
             return None
 
+        if len(result.split()) > 40:
+            print("[Brain] phi3 response too long, forcing ESCALATE")
+            return None
+
+        # If trying to return code
         if "```" in result or "def " in result or "class " in result or "import " in result:
             print("[Brain] phi3 returned code, forcing ESCALATE")
             return None
 
-        if len(result) > 200:
+        # Response got cut off mid-sentence
+        if result and result[-1] not in ".!?":
+            print("[Brain] phi3 response incomplete, forcing ESCALATE")
+            return None
+
+        # Adjust if getting to long of a response or unnecessarily escalating
+        if len(result) > 300:
             print("[Brain] phi3 response too long, forcing ESCALATE")
             return None
 
