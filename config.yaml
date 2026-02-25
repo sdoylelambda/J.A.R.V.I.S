@@ -22,7 +22,7 @@ llm:
     orchestrator:
       name: mistral
       # set for shorter commands - double if cut off
-      num_ctx: 1024
+      num_ctx: 2048
       # low-medium - consistent JSON output, handles varied phrasing
       temperature: 0.2
     classifier:

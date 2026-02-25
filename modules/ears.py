@@ -11,9 +11,6 @@ class Ears:
     def __init__(self, chunk_size=1024, rate=48000, debug=False,
                  pre_speech_timeout=3.0, max_speech_duration=25.0,
                  silence_seconds=1.5):
-        self.pre_speech_timeout = pre_speech_timeout
-        self.max_speech_duration = max_speech_duration
-        self.silence_seconds = silence_seconds
         self.audio_stream = None
         self.chunk_size = chunk_size
         self.rate = rate
@@ -21,11 +18,18 @@ class Ears:
         self.debug = debug
         self.speaking = False
 
-        # Speech detection params
-        self.start_threshold = 1200     # speech start RMS
-        self.stop_threshold = 700       # speech end RMS
-        self.hangover_chunks = 12       # ~0.8s at 1024/16kHz
+        # dynamic — set by calibration
+        self.start_threshold = 4000
+        self.stop_threshold = 2000
         self.noise_floor = None
+
+        # speech confirmation — prevents AC spikes triggering false starts
+        self.speech_confirm_chunks = 3
+
+        self.pre_speech_timeout = pre_speech_timeout
+        self.max_speech_duration = max_speech_duration
+        self.silence_seconds = silence_seconds
+        self.hangover_chunks = 12
 
     def _find_mic(self, p):
         """Find the first real analog mic input, falling back to pulse."""
@@ -89,7 +93,7 @@ class Ears:
                     frames_per_buffer=self.chunk_size,
                 )
                 if self.noise_floor is None:
-                    await self._calibrate_noise_floor()
+                    await self._calibrate_noise_floor(seconds=2.0, pre_delay=1)
 
         finally:
             # always restore stderr even if something crashes
@@ -97,7 +101,7 @@ class Ears:
             os.close(old_stderr)
 
     async def _calibrate_noise_floor(self, seconds=1.0, pre_delay=1):
-        await asyncio.sleep(pre_delay)  # let TTS echo settle
+        await asyncio.sleep(pre_delay)
         samples = []
         start = time.time()
 
@@ -111,22 +115,22 @@ class Ears:
             rms = np.sqrt(np.mean(audio_np.astype(np.float32) ** 2))
             samples.append(rms)
 
-        self.noise_floor = float(np.mean(samples))
+        # use 90th percentile instead of mean — handles AC spikes better
+        self.noise_floor = float(np.percentile(samples, 90))
 
-        # If noise floor is suspiciously high, fall back to static values
         if self.noise_floor > 5000:
             print(f"[Ears] WARNING: Noise floor too high ({int(self.noise_floor)}), using static thresholds")
-            self.start_threshold = 1500
-            self.stop_threshold = 800
+            self.start_threshold = 8000
+            self.stop_threshold = 4000
         else:
-            self.start_threshold = self.noise_floor * 4.0  # harder to trigger (adjust down if you can't be heard)
+            self.start_threshold = self.noise_floor * 4.0
             self.stop_threshold = self.noise_floor * 2.0
 
         print(f"[Ears] Noise floor={int(self.noise_floor)} "
               f"start={int(self.start_threshold)} "
               f"stop={int(self.stop_threshold)}")
 
-    async def auto_calibrate(self, interval: int = 30):
+    async def auto_calibrate(self, interval: int = 20):
         """Recalibrate noise floor every interval seconds, only during silence."""
         while True:
             await asyncio.sleep(interval)
@@ -134,13 +138,15 @@ class Ears:
                 if not self.paused and self.audio_stream and not self.speaking:
                     if self.debug:
                         print("[Ears] Recalibrating noise floor...")
-                    await self._calibrate_noise_floor(seconds=0.5, pre_delay=0)
+                    await self._calibrate_noise_floor(seconds=2.0, pre_delay=0)
             except OSError as e:
                 print(f"[Ears] Calibration failed: {e}, will retry next interval")
                 # reset stream so it gets reopened on next listen
                 self.audio_stream = None
 
     async def listen(self, max_duration=30.0):
+        if self.debug:
+            print(f"[Ears] Thresholds: start={int(self.start_threshold)} stop={int(self.stop_threshold)}")
         # retry up to 3 times with backoff
         for attempt in range(3):
             try:
@@ -159,6 +165,7 @@ class Ears:
         speech_started = False
         silence_chunks = 0
         speech_start_time = None
+        consecutive_loud = 0
 
         # from config params
         max_silence_chunks = int(self.silence_seconds * self.rate / self.chunk_size)
@@ -189,14 +196,17 @@ class Ears:
 
             # ---- waiting for speech to start ----
             if not speech_started:
-                # give up quickly if no speech — avoids long AC noise recordings
                 if time.time() - start_time > self.pre_speech_timeout:
                     return None, 0.0
                 if rms >= self.start_threshold:
-                    speech_started = True
-                    speech_start_time = time.time()
-                    self.speaking = True
-                    frames.append(data)
+                    consecutive_loud += 1
+                    if consecutive_loud >= self.speech_confirm_chunks:
+                        speech_started = True
+                        speech_start_time = time.time()
+                        self.speaking = True
+                        frames.append(data)
+                else:
+                    consecutive_loud = 0
                 continue
 
             # ---- recording after speech starts ----
