@@ -19,8 +19,8 @@ class Ears:
         self.speaking = False
 
         # dynamic — set by calibration
-        self.start_threshold = 4000
-        self.stop_threshold = 2000
+        self.start_threshold = 32767  # max possible value — won't trigger until calibrated
+        self.stop_threshold = 16000
         self.noise_floor = None
 
         # speech confirmation — prevents AC spikes triggering false starts

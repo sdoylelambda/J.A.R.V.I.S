@@ -166,7 +166,14 @@ class Brain:
             return None
 
         # If trying to return code
-        if "```" in result or "def " in result or "class " in result or "import " in result:
+        if ("```" in result or
+                "def " in result or
+                "class " in result or
+                "import " in result or
+                "<!doctype" in result.lower() or  # HTML document
+                "<html" in result.lower() or  # HTML document
+                "<style>" in result.lower() or  # standalone CSS block
+                "<body>" in result.lower()):  # HTML document
             print("[Brain] phi3 returned code, forcing ESCALATE")
             return None
 
@@ -214,6 +221,9 @@ class Brain:
             
             IMPORTANT: Always use generate_code instead of write_code when writing 
             actual code content. Never put more than 10 lines of code in write_code content.
+            
+            NEVER use write_code and generate_code together for the same file.
+            Use generate_code for ALL code files. Never use write_code for Python files.
 
             Set route to "claude" for complex reasoning or long document analysis.
             Set route to "gemini" for real-time or current information.

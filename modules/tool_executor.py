@@ -108,12 +108,13 @@ class ToolExecutor:
         print(f"[ToolExecutor] Generating code for: {description}")
 
         code = self.brain.query(
-            f"Write complete Python code for: {description}. "
-            f"Return only working code. No explanation. No markdown.",
+            f"Write complete working code for: {description}. "
+            f"Return ONLY code. No explanation. No apology. No markdown. No comments about requirements. "
+            f"Start immediately with the first line of code.",
             model_key="code"
         )
 
-        # strip markdown code blocks if model adds them anyway
+        # strip mark down code blocks if model adds them anyway
         if "```" in code:
             lines = code.split("\n")
             lines = [l for l in lines if not l.startswith("```")]

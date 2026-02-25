@@ -34,16 +34,17 @@ class Observer:
 
     async def listen_and_respond(self):
         self.face.set_state("thinking")
-        # init ears — triggers mic selection and noise floor prints
+        # init ears AND calibrate before greeting
         try:
-            await asyncio.wait_for(self.ears.listen(), timeout=3.0)
+            await asyncio.wait_for(self.ears.listen(), timeout=6.0)  # longer to allow calibration
         except asyncio.TimeoutError:
             pass
-        await self.say("Hello sir, what can I do for you.")
+
+        # now thresholds are set — safe to start
         print("[Observer] Listening and responding...")
-        # start auto calibration in background
-        interval = self.config["audio"].get("calibration_interval", 30)
-        asyncio.create_task(self.ears.auto_calibrate(interval=interval))
+        asyncio.create_task(self.ears.auto_calibrate(interval=20))
+        await self.say("Hello sir, what can I do for you.")
+        self.face.set_state("listening")
 
         while True:
             try:
@@ -184,12 +185,13 @@ class Observer:
 
             if plan.get("steps"):
                 if len(plan["steps"]) > 1:
-                    await self.say(summary)
+                    await self.say(plan["summary"])
                 results = await self.executor.execute_plan(plan)
-                for result in results:
-                    await self.say(result)
+                # only speak the LAST result, not all of them
+                if results:
+                    await self.say(results[-1])
             else:
-                await self.say(summary)
+                await self.say(plan["summary"])
 
         except PermissionRequired as e:
             await self.say(
