@@ -9,19 +9,17 @@ Install requirements.txt - pip install -r requirements.txt
 Run main.py - python main.py or python3 main.py
 
 # Basic use
-Speak open (program name) ie: browser - browser loads
-Speak 'take a break' Jarvis does not respond until you speak 'Jarvis' or 'you there?'
-Jarvis 'face', spinning orb of lights, reacts when in different states. (sleeping, listening, thinking, error)
+[x] - Speak open (program name) ie: browser - browser loads
+[x] - Speak 'take a break' Jarvis does not respond until you speak 'Jarvis' or 'you there?'
+[x] - Jarvis 'face', spinning orb of lights, reacts when in different states. (sleeping, listening, thinking, error)
 
 ### MVP
-Voice Commands
-Voice Responses
-Test dummy LLM data -> Small LLM -> Larger (simply replace LLM folder with desired LLM)
-Open/use Programs
+[x] - Voice Commands
+[x] - Voice Responses
+[x] - Test dummy LLM data -> Small LLM -> Larger (simply replace LLM folder with desired LLM)
+[x] - Open/use Programs
 Enter data
-Ask Questions
-Remember Conversations
-Adapt
+[x] - Answer general questions
 
 ### Stretch Goals
 Multiple nodes
@@ -43,3 +41,11 @@ Primary Computer sends plan to work station.
 Work station opens Pycharm, creates project. Sends screenshot to cell phone.
 User views screenshot on cellphone then says run it.
 Project runs on secondary computer. (Reduces load on primary computer, periphals, monitor, etc - Primary computer free to function as normal without interference.)
+
+### Next Steps
+[] - Remember Conversations
+[] - Adapt
+[] - Move files from / that aren't needed there
+[] - Remove extra code/files/etc.
+[] - More AI models for more tasks
+[] - ask what can you do? get response
