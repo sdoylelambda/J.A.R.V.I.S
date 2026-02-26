@@ -83,12 +83,13 @@ class Observer:
                     # cancel/control
                     "yes", "no", "cancel", "stop", "pause",
                     "never mind", "forget it", "escape", "deselect",
+                    "first", "second", "third", "forth", "fifth",
                     # browser navigation
                     "zoom in", "zoom out", "zoom reset", "go down", "go up", "go back", "go forward",
                     "new tab", "close tab", "refresh", "reload", "new window"
                     "full screen", "fullscreen", "find", "search on page",
                     "scroll up", "scroll down", "next", "enter", "press enter",
-                    "copy", "paste", "select", "click", "escape"
+                    "copy", "paste", "select", "click", "escape",
                     # app shortcuts
                     "save", "run", "clear",
                     # build commands
