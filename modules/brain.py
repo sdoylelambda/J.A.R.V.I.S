@@ -77,7 +77,14 @@ class Brain:
                 model=cfg["model"],
                 contents=prompt
             )
-            return response.text
+            # strip markdown before returning
+            import re
+            text = response.text
+            text = re.sub(r'\*+', '', text)  # remove asterisks
+            text = re.sub(r'#{1,6}\s?', '', text)  # remove headers
+            text = re.sub(r'`+', '', text)  # remove code ticks
+            text = re.sub(r'\n+', ' ', text)  # flatten newlines
+            return text.strip()
 
         else:
             raise ValueError(f"Unknown model key: {model_key}")
