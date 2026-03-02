@@ -134,7 +134,7 @@ All core functionality runs **completely locally** on your machine. No data leav
 ```bash
 # key is stored securely in OS keyring on first use — never touches disk
 # just run Jarvis and it will prompt you automatically when first using api
-
+# enter key in terminal run window
 python main.py
 ```
 
@@ -421,10 +421,12 @@ For any command that involves executing steps, Jarvis will:
 - [x] ALSA stream recovery with exponential backoff
 - [x] Stream lock preventing concurrent mic access crashes (SIGABRT/SIGSEGV)
 - [x] DeepSeek explanation stripper — fluff auto-commented at bottom of file
+- [x] GUI update — display thought process, text field, mute button
+- [x] Gemini API routing
+- [x] Add key prompt initiated by using Gemini for the first time
 
 ### Planned
-- [ ] GUI update — display thought process, text field, mute button
-- [ ] Claude / Gemini API routing
+- [ ] Claude API routing
 - [ ] Self-expanding fast keyword layer
 - [ ] RAG over local notes and files
 - [ ] Screen / vision support (LLaVA)
