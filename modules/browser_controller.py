@@ -6,6 +6,7 @@ import asyncio
 
 class BrowserController:
     def __init__(self, config: dict):
+        self.debug = False
         self.playwright = None
         self.browser = None
         self.context = None
@@ -37,10 +38,11 @@ class BrowserController:
                 )
 
             elif self.use_firefox:
-                print(f"[Browser] Profile path: {self.firefox_profile_path}")
-                print(f"[Browser] Profile exists: {os.path.exists(self.firefox_profile_path)}")
-                print(
-                    f"[Browser] prefs.js exists: {os.path.exists(os.path.join(self.firefox_profile_path, 'prefs.js'))}")
+                if self.debug:
+                    print(f"[Browser] Profile path: {self.firefox_profile_path}")
+                    print(f"[Browser] Profile exists: {os.path.exists(self.firefox_profile_path)}")
+                    print(
+                        f"[Browser] prefs.js exists: {os.path.exists(os.path.join(self.firefox_profile_path, 'prefs.js'))}")
 
                 if not os.path.exists(os.path.join(self.firefox_profile_path, "prefs.js")):
                     await self._create_profile("firefox")
@@ -64,7 +66,8 @@ class BrowserController:
                 )
 
             self.page = self.context.pages[0] if self.context.pages else await self.context.new_page()
-            print(f"[Browser] Ready — page url: {self.page.url}")
+            if self.debug:
+                print(f"[Browser] Ready — page url: {self.page.url}")
 
         except Exception as e:
             import traceback
@@ -89,6 +92,14 @@ class BrowserController:
             print("[Browser] Profile already exists, skipping setup.")
             return
 
+        # check if browser already running
+        if self.debug:
+            for proc in psutil.process_iter(['name']):
+                if proc.info['name'] and running_name in proc.info['name'].lower():
+                    print(f"[Browser] ⚠️  {browser_type} is running — please close it, then restart Jarvis.")
+                    input("Press Enter once closed...")
+                    break
+
         os.makedirs(profile_path, exist_ok=True)
         print(f"[Browser] First run — setting up {browser_type} profile.")
 
@@ -97,9 +108,16 @@ class BrowserController:
             self.context = await self.playwright.firefox.launch_persistent_context(
                 user_data_dir=profile_path,
                 headless=False,
-                executable_path=self.firefox_executable_path,
                 firefox_user_prefs={
                     "browser.downgrade.ignore": True,
+                    "browser.sessionstore.resume_from_crash": False,
+                    "browser.startup.page": 0,
+                    "browser.startup.homepage_override.mstone": "ignore",
+                    "toolkit.startup.max_resumed_crashes": -1,
+                    "browser.shell.checkDefaultBrowser": False,
+                    "browser.tabs.warnOnClose": False,
+                    "datareporting.policy.dataSubmissionEnabled": False,
+                    "datareporting.healthreport.uploadEnabled": False,
                 }
             )
             self.page = self.context.pages[0] if self.context.pages else await self.context.new_page()
@@ -109,7 +127,7 @@ class BrowserController:
         elif browser_type == "chrome":
             proc = subprocess.Popen([
                 "google-chrome",
-                f"--user-data-dir={profile_path}",
+                "--profile-directory=Jarvis"
             ])
             proc.wait()
             print("[Browser] Profile setup complete. Continuing startup...")
@@ -126,7 +144,8 @@ class BrowserController:
             return
 
         if self.playwright is None:
-            print("[Browser] First browser command — launching...")
+            if self.debug:
+                print("[Browser] First browser command — launching...")
             try:
                 await asyncio.wait_for(self.start(), timeout=30)
             except asyncio.TimeoutError:
@@ -157,7 +176,8 @@ class BrowserController:
     # ==========================================
     async def handle_command(self, spoken_text: str):
         text = spoken_text.lower().strip()
-        print(f"[Browser] handle_command called: '{text}'")
+        if self.debug:
+            print(f"[Browser] handle_command called: '{text}'")
 
         # check if this is actually a browser command first
         is_browser_command = (
@@ -193,14 +213,16 @@ class BrowserController:
         if "youtube" in text and not text.startswith("google"):
             await self._ensure_browser()
             query = text.replace("youtube", "").replace("open", "").replace("search", "").strip()
-            print(f"[Browser] YouTube query: '{query}'")
+            if self.debug:
+                print(f"[Browser] YouTube query: '{query}'")
             if query:
                 encoded = urllib.parse.quote_plus(query)
                 url = f"https://www.youtube.com/results?search_query={encoded}"
                 print(f"[Browser] Navigating to: {url}")
                 await self.page.goto(url)
                 await self.page.wait_for_load_state("domcontentloaded")
-                print(f"[Browser] Current url: {self.page.url}")
+                if self.debug:
+                    print(f"[Browser] Current url: {self.page.url}")
             else:
                 await self.page.goto("https://www.youtube.com")
             return True
