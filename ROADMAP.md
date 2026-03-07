@@ -77,7 +77,7 @@ Sprint 10 →  Flutter mobile app
 
 ---
 
-## 🎯 Resume Impact by Feature
+## 🎯 Impact by Feature
 
 These are the features that will generate the most interview conversation:
 
