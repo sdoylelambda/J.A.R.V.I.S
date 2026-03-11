@@ -41,7 +41,7 @@ if __name__ == "__main__":
     qt_app = QApplication(sys.argv)
     qt_app.setStyle("Fusion")
 
-    face = FaceController()
+    face = FaceController(config)
     face.show()
 
     thread = threading.Thread(target=run_async, args=(face, config), daemon=True)
