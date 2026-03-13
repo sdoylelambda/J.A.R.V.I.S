@@ -8,8 +8,7 @@ from config.api_keys import get_api_key
 from anthropic.types import MessageParam
 from google import genai
 from custom_exceptions import PermissionRequired, ModelUnavailable
-from utils import timer
-
+from modules.utils import timer
 
 
 class Brain:
@@ -74,11 +73,10 @@ class Brain:
                 raise PermissionRequired("gemini", prompt)
             gemini_api_key = get_api_key("gemini")
             client = genai.Client(api_key=gemini_api_key)
-            with timer("Gemini", self.debug):
-                response = client.models.generate_content(
-                    model=cfg["model"],
-                    contents=prompt
-                )
+            response = client.models.generate_content(
+                model=cfg["model"],
+                contents=prompt
+            )
             # strip markdown before returning
             import re
             text = response.text
@@ -293,7 +291,8 @@ class Brain:
         route = plan.get("route")
         if route in ("claude", "gemini"):
             print(f"[Brain] Escalating to {route}")
-            response = self.query(command, model_key=route)
+            with timer("Gemini/Claude", self.debug):
+                response = self.query(command, model_key=route)
             return {"summary": response, "steps": []}
 
         return plan
@@ -340,7 +339,7 @@ class Brain:
 
         is_code = any(kw in command_lower for kw in code_keywords) or has_code_extension
 
-        # multi-step commands need more context
+        # multistep commands need more context
         multi_keywords = ["and", "then", "also", "with", "plus", "add"]
         is_multi = sum(1 for kw in multi_keywords if kw in command_lower) >= 2
 
