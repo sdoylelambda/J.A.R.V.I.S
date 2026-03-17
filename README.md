@@ -36,6 +36,67 @@ announced before use.
 
 ---
 
+## Feature Roadmap
+
+### Complete
+- [x] Voice input (Whisper + Faster-Whisper hybrid STT)
+- [x] Voice output (Piper TTS) with British male voice, speed and pitch control
+- [x] PyQt5 GUI with embedded vispy 3D particle orb
+- [x] Five orb states — listening, thinking, speaking, sleeping, error
+- [x] Per-particle color variation and depth-based size variation
+- [x] Beam line connections for holographic look
+- [x] Smooth sin-wave breathing animation per state
+- [x] Real-time caption display — Brain status and spoken text
+- [x] Cancel button — stops current task instantly
+- [x] Mute button — toggles microphone
+- [x] Text input field — type commands directly
+- [x] Wake word / sleep commands
+- [x] Fast keyword command layer
+- [x] App launching
+- [x] Browser control (Playwright) with scroll, zoom, click, navigate, YouTube
+- [x] Context-aware keyboard shortcuts
+- [x] Ollama local LLM integration
+- [x] phi3:mini fast classifier with ESCALATE guardrails
+- [x] Mistral orchestrator with structured JSON plans
+- [x] Dynamic context window sizing based on command complexity
+- [x] DeepSeek Coder for all code generation (Python, JS, HTML, CSS, Dart, etc.)
+- [x] Tool execution layer (files, folders, code, browser, web search)
+- [x] Privacy-first API permission system
+- [x] Hallucination and echo loop filters
+- [x] Echo cancellation (ears paused during TTS + buffer flush)
+- [x] Plan → Confirm → Execute flow with live step progress in GUI
+- [x] File overwrite confirmation
+- [x] Cancel between execution steps
+- [x] Command queue — speak next command while Brain is working
+- [x] "One moment please" for slow Brain responses
+- [x] Dynamic noise floor calibration (auto-adjusts to environment every 20s)
+- [x] ALSA stream recovery with exponential backoff
+- [x] Stream lock preventing concurrent mic access crashes (SIGABRT/SIGSEGV)
+- [x] DeepSeek explanation stripper — fluff auto-commented at bottom of file
+- [x] Gemini API routing
+- [x] Claude API routing
+
+### Planned
+- [ ] Google calendar integration and control
+- [ ] Self-expanding fast keyword layer
+- [ ] RAG over local notes and files
+- [ ] Summarize PDF
+- [ ] Summarize screenshot
+- [ ] Research topic 
+- [ ] Screen / vision support (LLaVA)
+- [ ] Android client over SSH
+- [ ] Persistent memory and user preferences
+- [ ] Push-to-talk mode
+- [ ] Camera integration to view and assess real scenarios
+- [ ] Gmail integration and control
+- [ ] Slack alerts
+- [ ] Text alerts
+- [ ] Follow-up commands
+- [ ] n8n integration
+- [ ] Function Gemma - live data; weather, stock prices, etc.
+
+---
+
 ## Platform Support
 
 | Feature | Linux | Mac | Windows |
@@ -555,67 +616,6 @@ For any command that involves executing steps, Atlas will:
 **File exists?** Atlas says "backend.py already exists, sir. Say overwrite to replace it." Say overwrite/replace/yes to proceed or anything else to keep the existing file.
 
 **Slow response?** If Brain takes more than 5 seconds, Atlas says "One moment please, sir." and continues working.
-
----
-
-## Feature Roadmap
-
-### Complete
-- [x] Voice input (Whisper + Faster-Whisper hybrid STT)
-- [x] Voice output (Piper TTS) with British male voice, speed and pitch control
-- [x] PyQt5 GUI with embedded vispy 3D particle orb
-- [x] Five orb states — listening, thinking, speaking, sleeping, error
-- [x] Per-particle color variation and depth-based size variation
-- [x] Beam line connections for holographic look
-- [x] Smooth sin-wave breathing animation per state
-- [x] Real-time caption display — Brain status and spoken text
-- [x] Cancel button — stops current task instantly
-- [x] Mute button — toggles microphone
-- [x] Text input field — type commands directly
-- [x] Wake word / sleep commands
-- [x] Fast keyword command layer
-- [x] App launching
-- [x] Browser control (Playwright) with scroll, zoom, click, navigate, YouTube
-- [x] Context-aware keyboard shortcuts
-- [x] Ollama local LLM integration
-- [x] phi3:mini fast classifier with ESCALATE guardrails
-- [x] Mistral orchestrator with structured JSON plans
-- [x] Dynamic context window sizing based on command complexity
-- [x] DeepSeek Coder for all code generation (Python, JS, HTML, CSS, Dart, etc.)
-- [x] Tool execution layer (files, folders, code, browser, web search)
-- [x] Privacy-first API permission system
-- [x] Hallucination and echo loop filters
-- [x] Echo cancellation (ears paused during TTS + buffer flush)
-- [x] Plan → Confirm → Execute flow with live step progress in GUI
-- [x] File overwrite confirmation
-- [x] Cancel between execution steps
-- [x] Command queue — speak next command while Brain is working
-- [x] "One moment please" for slow Brain responses
-- [x] Dynamic noise floor calibration (auto-adjusts to environment every 20s)
-- [x] ALSA stream recovery with exponential backoff
-- [x] Stream lock preventing concurrent mic access crashes (SIGABRT/SIGSEGV)
-- [x] DeepSeek explanation stripper — fluff auto-commented at bottom of file
-- [x] Gemini API routing
-
-### Planned
-- [ ] Calendar integration and control
-- [ ] Claude API routing
-- [ ] Self-expanding fast keyword layer
-- [ ] RAG over local notes and files
-- [ ] Summarize PDF
-- [ ] Summarize screenshot
-- [ ] Research topic 
-- [ ] Screen / vision support (LLaVA)
-- [ ] Android client over SSH
-- [ ] Persistent memory and user preferences
-- [ ] Push-to-talk mode
-- [ ] Camera integration to view and assess real scenarios
-- [ ] Gmail integration and control
-- [ ] Slack alerts
-- [ ] Text alerts
-- [ ] Follow-up commands
-- [ ] n8n integration
-- [ ] Function Calling with Function Gemma - live data; weather, stock prices, etc.
 
 ---
 
