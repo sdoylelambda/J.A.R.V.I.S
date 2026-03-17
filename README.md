@@ -75,9 +75,9 @@ announced before use.
 - [x] DeepSeek explanation stripper — fluff auto-commented at bottom of file
 - [x] Gemini API routing
 - [x] Claude API routing
+- [x] Google calendar integration and control
 
 ### Planned
-- [ ] Google calendar integration and control
 - [ ] Self-expanding fast keyword layer
 - [ ] RAG over local notes and files
 - [ ] Summarize PDF
@@ -193,6 +193,7 @@ announced before use.
   pip install PyQt5
   pip install playwright
   pip install pyyaml
+  pip install pytest-asyncio
   pip install anthropic               # Claude API (optional)
   pip install google-genai            # Gemini API (optional)
   ```
@@ -263,6 +264,7 @@ A.T.L.A.S/
 │   ├── ears.py              # Microphone input with dynamic noise calibration
 │   ├── tts.py               # Text-to-speech (Piper)
 │   ├── face.py              # PyQt5 GUI — orb, captions, controls
+│   ├── calendar.py          # Google calendar - check schedule and add events
 │   └── stt/
 │       └── hybrid_stt.py    # Speech-to-text (Whisper + Faster-Whisper)
 ```
@@ -332,6 +334,13 @@ llm:
 
   # legacy/unused for now
   model_path: "./models/mpt-7b/"
+  
+# ---- Integrations ----
+integrations:
+  google_calendar:
+    enabled: true
+    credentials_path: "~/.config/atlas/google_calendar_credentials.json"
+    token_path: "~/.config/atlas/google_calendar_token.json"
 
 # ---- Memory ----
 memory:
@@ -522,13 +531,39 @@ Shows spoken text when Atlas is speaking, clears automatically after.
 | `close` | Ctrl+W |
 
 ### Conversation & Facts
-| Say | Result |
-|-----|--------|
-| `what's the capital of France` | Instant answer via phi3 |
-| `tell me a joke` | Dry British wit |
-| `how are you today` | Atlas responds in character |
+| Say                            | Result                                                  |
+|--------------------------------|---------------------------------------------------------|
+| `what's the capital of France` | Instant answer via phi3                                 |
+| `tell me a joke`               | Dry British wit                                         |
+| `how are you today`            | Atlas responds in character                             |
+| `what can you do`              | Atlas responds dynamically with enabled features listed |
 
 ---
+
+### Calendar
+| Say | Result |
+|-----|--------|
+| `what do I have today` | Today's events |
+| `what's on my schedule today` | Today's events |
+| `what do I have tomorrow` | Tomorrow's events |
+| `what's on my calendar tomorrow` | Tomorrow's events |
+| `what do I have this week` | Events for next 7 days |
+| `upcoming events` | Events for next 7 days |
+| `when is my next meeting` | Next upcoming event |
+| `what's next` | Next upcoming event |
+| `add dentist friday at 2pm` | Create event — parsed directly |
+| `add dentist friday at 2pm for 2 hours` | Create event with duration |
+| `schedule a meeting tomorrow at 9:30am` | Create event |
+| `add an event` | Guided flow — Atlas asks for details |
+
+### Calendar Setup
+Atlas uses Google Calendar API with OAuth2. On first use a browser window will open for Google login. Approve access and the token is saved permanently — never asked again.
+
+Credentials and token are stored outside the project:
+```
+~/.config/atlas/google_calendar_credentials.json  ← download from Google Cloud Console
+~/.config/atlas/google_calendar_token.json        ← created automatically on first login
+```
 
 ## Architecture: How a Command Flows
 

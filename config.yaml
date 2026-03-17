@@ -67,7 +67,10 @@ llm:
 # ---- Integrations ----
 integrations:
   google_calendar:
-    enabled: false
+    enabled: true
+    credentials_path: "/home/zero/.config/atlas/google_calendar_credentials.json"
+    # created on first run. it will be stored here
+    token_path: "/home/zero/.config/atlas/google_calendar_token.json"
   gmail:
     enabled: false
 
