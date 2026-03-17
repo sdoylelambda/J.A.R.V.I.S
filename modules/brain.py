@@ -159,10 +159,15 @@ class Brain:
             "i do not have",
             "as an ai",
             "i'm just an ai",
+            "scheduled for",
+            "appointment scheduled",
+            "added to",
+            "reminder set",
+            "I'll remind you"
         ]
 
         if any(phrase in result.lower() for phrase in escalate_phrases):
-            print(f"[Brain] phi3 apologized or refused, forcing ESCALATE")
+            print(f"[Brain] phi3 apologized, pretended or refused: forcing ESCALATE")
             return None
 
         # If trying to return code

@@ -1,6 +1,7 @@
 import time
 import asyncio
 import threading
+import datetime
 
 from modules.ears import Ears
 from modules.stt.hybrid_stt import HybridSTT
@@ -10,6 +11,7 @@ from modules.brain import Brain
 from modules.tool_executor import ToolExecutor
 from modules.browser_controller import BrowserController
 from modules.utils import timer
+from modules.calendar_module import CalendarModule
 from config.api_keys import get_api_key, set_key_request_callback
 from custom_exceptions import PermissionRequired, ModelUnavailable, PlanExecutionError
 
@@ -37,6 +39,8 @@ class Observer:
         self.browser_controller = BrowserController(config)
         self.launcher = AppLauncher(window_controller, self.browser_controller)
         self.executor = ToolExecutor(self.launcher, self.browser_controller, self.brain)
+        calendar_enabled = config.get("integrations", {}).get("google_calendar", {}).get("enabled", False)
+        self.calendar = CalendarModule(config) if calendar_enabled else None
         self.stt = HybridSTT(
             whisper_model=config["stt"].get("whisper_model", "small"),
             fw_model=config["stt"].get("fw_model", "small"),
@@ -93,9 +97,9 @@ class Observer:
                     "never mind", "forget it", "escape", "deselect",
                     "first", "second", "third", "forth", "fifth", "break"
                     # browser navigation
-                    "zoom in", "zoom out", "zoom reset", "go down", "go up", "go back", "go forward",
+                                                                  "zoom in", "zoom out", "zoom reset", "go down", "go up", "go back", "go forward",
                     "new tab", "close tab", "refresh", "reload", "new window"
-                    "full screen", "fullscreen", "find", "search on page",
+                                                                 "full screen", "fullscreen", "find", "search on page",
                     "scroll up", "scroll down", "next", "enter", "press enter",
                     "copy", "paste", "select", "click", "escape",
                     # app shortcuts
@@ -104,6 +108,8 @@ class Observer:
                     "yeah", "yep", "do",  "it", "proceed",
                     "sure", "go", "ahead", "affirmative", "correct",
                     "build", "sounds", "good"
+                    # calendar commands
+                                       "today's events", "next event", "what's next", "this week", "upcoming events"
                 ]
                 if len(words) <= 1 and not any(cmd in text for cmd in known_short):
                     print(f"[STT] Too short, skipping: {text}")
@@ -163,6 +169,115 @@ class Observer:
                 ]):
                     await self.say(self._build_capabilities(), next_state="listening")
                     continue
+
+                # 📅 Calendar commands
+                if self.calendar:
+                    # 📅 Create event
+                    if any(phrase in text for phrase in [
+                        "add ", "schedule ", "create event", "new event",
+                        "new appointment", "remind me", "set a reminder"
+                    ]) and any(w in text for w in [
+                        "today", "tomorrow", "monday", "tuesday", "wednesday",
+                        "thursday", "friday", "saturday", "sunday",
+                        "tonight", "this evening", "next week"
+                    ]):
+                        # try to parse directly first
+                        parsed = self.calendar.parse_event_from_text(text)
+
+                        if parsed and parsed.get("time"):
+                            # have enough info — create directly
+                            result = await asyncio.to_thread(
+                                self.calendar.create_event,
+                                parsed["title"],
+                                parsed["date"],
+                                parsed.get("time"),
+                                parsed.get("duration", 60)
+                            )
+                            day_str = "today" if parsed["date"] == datetime.date.today().isoformat() else parsed["date"]
+                            await self.say(
+                                f"Done, sir. {parsed['title']} added on {day_str} at {parsed.get('time')}.",
+                                next_state="listening"
+                            )
+                        elif parsed and not parsed.get("time"):
+                            # have title and date but no time — ask for time only
+                            await self.say("What time, sir?")
+                            audio_bytes, dur = await self.ears.listen()
+                            time_text = self.stt.transcribe(audio_bytes, dur).lower().strip() if audio_bytes else ""
+                            combined = f"{text} {time_text}"
+                            parsed = self.calendar.parse_event_from_text(combined)
+                            if parsed:
+                                result = await asyncio.to_thread(
+                                    self.calendar.create_event,
+                                    parsed["title"],
+                                    parsed["date"],
+                                    parsed.get("time"),
+                                    parsed.get("duration", 60)
+                                )
+                                await self.say(
+                                    f"Done, sir. {parsed['title']} added.",
+                                    next_state="listening"
+                                )
+                            else:
+                                await self.say("Sorry sir, I couldn't parse that. Please try again.",
+                                               next_state="listening")
+                        else:
+                            # not enough info — guided flow
+                            await self.say("What's the title of the event, sir?")
+                            audio_bytes, dur = await self.ears.listen()
+                            title = self.stt.transcribe(audio_bytes, dur).lower().strip() if audio_bytes else ""
+
+                            await self.say("What day, sir?")
+                            audio_bytes, dur = await self.ears.listen()
+                            day_text = self.stt.transcribe(audio_bytes, dur).lower().strip() if audio_bytes else ""
+
+                            await self.say("What time, sir?")
+                            audio_bytes, dur = await self.ears.listen()
+                            time_text = self.stt.transcribe(audio_bytes, dur).lower().strip() if audio_bytes else ""
+
+                            combined = f"{title} {day_text} {time_text}"
+                            parsed = self.calendar.parse_event_from_text(combined)
+
+                            if parsed:
+                                result = await asyncio.to_thread(
+                                    self.calendar.create_event,
+                                    parsed["title"],
+                                    parsed["date"],
+                                    parsed.get("time"),
+                                    parsed.get("duration", 60)
+                                )
+                                await self.say(f"Done, sir. {parsed['title']} added.", next_state="listening")
+                            else:
+                                await self.say("Sorry sir, I wasn't able to create that event.", next_state="listening")
+
+                        continue
+
+                    calendar_words = ["today", "schedule", "events", "calendar", "this week", "upcoming",
+                                      "next meeting", "next event"]
+
+                    if any(phrase in text for phrase in calendar_words):
+                        if any(w in text for w in ["this week", "upcoming", "week"]):
+                            events = await asyncio.to_thread(self.calendar.get_upcoming_events, 7)
+                            await self.say(self.calendar.format_events_for_speech(events, multi_day=True),
+                                           next_state="listening")
+                            continue
+
+
+                        if any(w in text for w in ["tomorrow", "tomorrow's"]):
+                            events = await asyncio.to_thread(self.calendar.get_tomorrows_events)
+                            await self.say(self.calendar.format_events_for_speech(events), next_state="listening")
+                            continue
+
+                        if any(w in text for w in ["next meeting", "next event", "what's next"]):
+                            event = await asyncio.to_thread(self.calendar.get_next_event)
+                            response = self.calendar.format_events_for_speech(
+                                [event]) if event else "Nothing coming up, sir."
+                            await self.say(response, next_state="listening")
+                            continue
+
+                        if any(w in text for w in ["today", "schedule today", "my schedule"]):
+                            events = await asyncio.to_thread(self.calendar.get_todays_events)
+                            await self.say(self.calendar.format_events_for_speech(events), next_state="listening")
+                            continue
 
                 # 🚀 Command handling
                 self.face.set_state("thinking")

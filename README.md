@@ -36,6 +36,67 @@ announced before use.
 
 ---
 
+## Feature Roadmap
+
+### Complete
+- [x] Voice input (Whisper + Faster-Whisper hybrid STT)
+- [x] Voice output (Piper TTS) with British male voice, speed and pitch control
+- [x] PyQt5 GUI with embedded vispy 3D particle orb
+- [x] Five orb states — listening, thinking, speaking, sleeping, error
+- [x] Per-particle color variation and depth-based size variation
+- [x] Beam line connections for holographic look
+- [x] Smooth sin-wave breathing animation per state
+- [x] Real-time caption display — Brain status and spoken text
+- [x] Cancel button — stops current task instantly
+- [x] Mute button — toggles microphone
+- [x] Text input field — type commands directly
+- [x] Wake word / sleep commands
+- [x] Fast keyword command layer
+- [x] App launching
+- [x] Browser control (Playwright) with scroll, zoom, click, navigate, YouTube
+- [x] Context-aware keyboard shortcuts
+- [x] Ollama local LLM integration
+- [x] phi3:mini fast classifier with ESCALATE guardrails
+- [x] Mistral orchestrator with structured JSON plans
+- [x] Dynamic context window sizing based on command complexity
+- [x] DeepSeek Coder for all code generation (Python, JS, HTML, CSS, Dart, etc.)
+- [x] Tool execution layer (files, folders, code, browser, web search)
+- [x] Privacy-first API permission system
+- [x] Hallucination and echo loop filters
+- [x] Echo cancellation (ears paused during TTS + buffer flush)
+- [x] Plan → Confirm → Execute flow with live step progress in GUI
+- [x] File overwrite confirmation
+- [x] Cancel between execution steps
+- [x] Command queue — speak next command while Brain is working
+- [x] "One moment please" for slow Brain responses
+- [x] Dynamic noise floor calibration (auto-adjusts to environment every 20s)
+- [x] ALSA stream recovery with exponential backoff
+- [x] Stream lock preventing concurrent mic access crashes (SIGABRT/SIGSEGV)
+- [x] DeepSeek explanation stripper — fluff auto-commented at bottom of file
+- [x] Gemini API routing
+- [x] Claude API routing
+- [x] Google calendar integration and control
+
+### Planned
+- [ ] Self-expanding fast keyword layer
+- [ ] RAG over local notes and files
+- [ ] Summarize PDF
+- [ ] Summarize screenshot
+- [ ] Research topic 
+- [ ] Screen / vision support (LLaVA)
+- [ ] Android client over SSH
+- [ ] Persistent memory and user preferences
+- [ ] Push-to-talk mode
+- [ ] Camera integration to view and assess real scenarios
+- [ ] Gmail integration and control
+- [ ] Slack alerts
+- [ ] Text alerts
+- [ ] Follow-up commands
+- [ ] n8n integration
+- [ ] Function Gemma - live data; weather, stock prices, etc.
+
+---
+
 ## Platform Support
 
 | Feature | Linux | Mac | Windows |
@@ -131,6 +192,7 @@ announced before use.
   pip install PyQt5
   pip install playwright
   pip install pyyaml
+  pip install pytest-asyncio
   pip install anthropic               # Claude API (optional)
   pip install google-genai            # Gemini API (optional)
   ```
@@ -201,6 +263,7 @@ A.T.L.A.S/
 │   ├── ears.py              # Microphone input with dynamic noise calibration
 │   ├── tts.py               # Text-to-speech (Piper)
 │   ├── face.py              # PyQt5 GUI — orb, captions, controls
+│   ├── calendar.py          # Google calendar - check schedule and add events
 │   └── stt/
 │       └── hybrid_stt.py    # Speech-to-text (Whisper + Faster-Whisper)
 ```
@@ -270,6 +333,13 @@ llm:
 
   # legacy/unused for now
   model_path: "./models/mpt-7b/"
+  
+# ---- Integrations ----
+integrations:
+  google_calendar:
+    enabled: true
+    credentials_path: "~/.config/atlas/google_calendar_credentials.json"
+    token_path: "~/.config/atlas/google_calendar_token.json"
 
 # ---- Memory ----
 memory:
@@ -460,13 +530,39 @@ Shows spoken text when Atlas is speaking, clears automatically after.
 | `close` | Ctrl+W |
 
 ### Conversation & Facts
-| Say | Result |
-|-----|--------|
-| `what's the capital of France` | Instant answer via phi3 |
-| `tell me a joke` | Dry British wit |
-| `how are you today` | Atlas responds in character |
+| Say                            | Result                                                  |
+|--------------------------------|---------------------------------------------------------|
+| `what's the capital of France` | Instant answer via phi3                                 |
+| `tell me a joke`               | Dry British wit                                         |
+| `how are you today`            | Atlas responds in character                             |
+| `what can you do`              | Atlas responds dynamically with enabled features listed |
 
 ---
+
+### Calendar
+| Say | Result |
+|-----|--------|
+| `what do I have today` | Today's events |
+| `what's on my schedule today` | Today's events |
+| `what do I have tomorrow` | Tomorrow's events |
+| `what's on my calendar tomorrow` | Tomorrow's events |
+| `what do I have this week` | Events for next 7 days |
+| `upcoming events` | Events for next 7 days |
+| `when is my next meeting` | Next upcoming event |
+| `what's next` | Next upcoming event |
+| `add dentist friday at 2pm` | Create event — parsed directly |
+| `add dentist friday at 2pm for 2 hours` | Create event with duration |
+| `schedule a meeting tomorrow at 9:30am` | Create event |
+| `add an event` | Guided flow — Atlas asks for details |
+
+### Calendar Setup
+Atlas uses Google Calendar API with OAuth2. On first use a browser window will open for Google login. Approve access and the token is saved permanently — never asked again.
+
+Credentials and token are stored outside the project:
+```
+~/.config/atlas/google_calendar_credentials.json  ← download from Google Cloud Console
+~/.config/atlas/google_calendar_token.json        ← created automatically on first login
+```
 
 ## Architecture: How a Command Flows
 
@@ -554,67 +650,6 @@ For any command that involves executing steps, Atlas will:
 **File exists?** Atlas says "backend.py already exists, sir. Say overwrite to replace it." Say overwrite/replace/yes to proceed or anything else to keep the existing file.
 
 **Slow response?** If Brain takes more than 5 seconds, Atlas says "One moment please, sir." and continues working.
-
----
-
-## Feature Roadmap
-
-### Complete
-- [x] Voice input (Whisper + Faster-Whisper hybrid STT)
-- [x] Voice output (Piper TTS) with British male voice, speed and pitch control
-- [x] PyQt5 GUI with embedded vispy 3D particle orb
-- [x] Five orb states — listening, thinking, speaking, sleeping, error
-- [x] Per-particle color variation and depth-based size variation
-- [x] Beam line connections for holographic look
-- [x] Smooth sin-wave breathing animation per state
-- [x] Real-time caption display — Brain status and spoken text
-- [x] Cancel button — stops current task instantly
-- [x] Mute button — toggles microphone
-- [x] Text input field — type commands directly
-- [x] Wake word / sleep commands
-- [x] Fast keyword command layer
-- [x] App launching
-- [x] Browser control (Playwright) with scroll, zoom, click, navigate, YouTube
-- [x] Context-aware keyboard shortcuts
-- [x] Ollama local LLM integration
-- [x] phi3:mini fast classifier with ESCALATE guardrails
-- [x] Mistral orchestrator with structured JSON plans
-- [x] Dynamic context window sizing based on command complexity
-- [x] DeepSeek Coder for all code generation (Python, JS, HTML, CSS, Dart, etc.)
-- [x] Tool execution layer (files, folders, code, browser, web search)
-- [x] Privacy-first API permission system
-- [x] Hallucination and echo loop filters
-- [x] Echo cancellation (ears paused during TTS + buffer flush)
-- [x] Plan → Confirm → Execute flow with live step progress in GUI
-- [x] File overwrite confirmation
-- [x] Cancel between execution steps
-- [x] Command queue — speak next command while Brain is working
-- [x] "One moment please" for slow Brain responses
-- [x] Dynamic noise floor calibration (auto-adjusts to environment every 20s)
-- [x] ALSA stream recovery with exponential backoff
-- [x] Stream lock preventing concurrent mic access crashes (SIGABRT/SIGSEGV)
-- [x] DeepSeek explanation stripper — fluff auto-commented at bottom of file
-- [x] Gemini API routing
-
-### Planned
-- [ ] Calendar integration and control
-- [ ] Claude API routing
-- [ ] Self-expanding fast keyword layer
-- [ ] RAG over local notes and files
-- [ ] Summarize PDF
-- [ ] Summarize screenshot
-- [ ] Research topic 
-- [ ] Screen / vision support (LLaVA)
-- [ ] Android client over SSH
-- [ ] Persistent memory and user preferences
-- [ ] Push-to-talk mode
-- [ ] Camera integration to view and assess real scenarios
-- [ ] Gmail integration and control
-- [ ] Slack alerts
-- [ ] Text alerts
-- [ ] Follow-up commands
-- [ ] n8n integration
-- [ ] Function Calling with Function Gemma - live data; weather, stock prices, etc.
 
 ---
 
