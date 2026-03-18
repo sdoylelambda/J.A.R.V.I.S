@@ -22,6 +22,8 @@ Atlas is built around a layered intelligence architecture:
 3. **Mistral 7B** — orchestrates complex multi-step tasks and generates structured execution plans
 4. **DeepSeek Coder 6.7B** — dedicated code generation model, handles all code files
 5. **Cloud APIs** — Claude and Gemini available for long-context reasoning and real-time information (opt-in, permission required)
+6. **LLaVA** — local vision model, analyzes webcam frames for object identification, 
+   scene description, and text reading
 
 All core functionality runs **completely locally** on your machine. No data leaves your computer unless you explicitly approve it.
 
@@ -76,6 +78,8 @@ announced before use.
 - [x] Gemini API routing
 - [x] Claude API routing
 - [x] Google calendar integration and control
+- [x] Camera integration to view and assess real scenarios
+- [x] Screen / vision support (LLaVA)
 
 ### Planned
 - [ ] Self-expanding fast keyword layer
@@ -83,17 +87,22 @@ announced before use.
 - [ ] Summarize PDF
 - [ ] Summarize screenshot
 - [ ] Research topic 
-- [ ] Screen / vision support (LLaVA)
 - [ ] Android client over SSH
 - [ ] Persistent memory and user preferences
 - [ ] Push-to-talk mode
-- [ ] Camera integration to view and assess real scenarios
 - [ ] Gmail integration and control
 - [ ] Slack alerts
 - [ ] Text alerts
 - [ ] Follow-up commands
 - [ ] n8n integration
 - [ ] Function Gemma - live data; weather, stock prices, etc.
+- [ ] Mac and PC versions
+- [ ] Camera add more features
+      - [ ] Gemini Vision fallback — for complex analysis
+      - [ ] "analyze this diagram"
+      - [ ] "what's wrong with this code" ← hold code up to camera
+      - [ ] "summarize this document"
+      - [ ] Use mobile phone's camera     
 
 ---
 
@@ -217,7 +226,7 @@ announced before use.
 
 ### API Keys (Optional)
 - [ ] Anthropic (Claude) — https://console.anthropic.com
-- [ ] Google (Gemini) — https://console.cloud.google.com
+- [ ] Google (Gemini)  — https://console.cloud.google.com
 - [ ] Set `api_models.claude.enabled: true` and/or `api_models.gemini.enabled: true` in config to activate
 
 ### Workspace
@@ -275,8 +284,8 @@ A.T.L.A.S/
 ```yaml
 # ---- Node identity ----
 node:
-  name: "g7"
-  role: "single_node" # single_node | observer | brain | hands
+  name: "{device name}"
+  role: "{device role}" # single_node | observer | brain | hands
 
 # ---- Networking (future use) ----
 network:
@@ -366,13 +375,23 @@ audio:
 transcription:
   engine: faster-whisper
 
-  tts:
-    # mock TTS
-    enabled: false
-    engine: "coqui"
-    voice: "default"
+# ---- Speech ----
+tts:
+  # mock TTS
+  enabled: false
+  engine: "coqui"
+  voice: "default"
 
-    # update
+
+# ---- Camera vision ----
+vision:
+  enabled: true
+  camera_index: 0
+  model: llava
+  max_storage_mb: 500
+  resolution_width: 1280
+  resolution_height: 720
+
 
 # ---- Execution permissions ----
 permissions:
@@ -402,8 +421,8 @@ stt:
   fw_model: small
 
 system:
-  cpu_threads: 6
-  use_gpu: false
+  cpu_threads: {number of threads}
+  use_gpu: true
 
 browser:
   profile: "atlas"
@@ -562,6 +581,33 @@ Credentials and token are stored outside the project:
 ```
 ~/.config/atlas/google_calendar_credentials.json  ← download from Google Cloud Console
 ~/.config/atlas/google_calendar_token.json        ← created automatically on first login
+```
+
+### Vision (Eyes)
+| Say | Result |
+|-----|--------|
+| `what do you see` | Describes full scene |
+| `what can you see` | Describes full scene |
+| `what's on my desk` | Describes workspace |
+| `what's behind me` | Describes background |
+| `what am I holding` | Identifies object |
+| `what is this` | Identifies object |
+| `read this` | Transcribes visible text |
+| `what does this say` | Transcribes visible text |
+| `read the text on screen` | Reads monitor/screen text |
+| `is anyone there` | Detects people in frame |
+| `how many people` | Counts visible people |
+| `what am I doing` | Describes activity |
+| `what color is this` | Identifies colors |
+| `do you see a phone` | Answers yes/no vision questions |
+| `is there a X` | Answers yes/no vision questions |
+| `does this look right` | General vision question |
+
+### Vision Setup
+Atlas uses your webcam and LLaVA running locally via Ollama.
+```bash
+ollama pull llava
+pip install opencv-python
 ```
 
 ## Architecture: How a Command Flows
@@ -725,7 +771,8 @@ tests/
 ├── test_tool_executor.py    # file creation, code generation, plan execution
 ├── test_observer.py         # command routing, cancel, confirmation flow
 ├── test_ears.py             # noise calibration, hallucination filters
-└── test_stt.py              # transcription, echo detection
+├── test_stt.py              # transcription, echo detection.
+└── test_calendar_module.py  # checks schedule, adds events, verifies correct parsing 
 ```
 
 ### Running Specific Tests
