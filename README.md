@@ -863,6 +863,4 @@ pytest tests/ --cov=modules --cov-report=term-missing
 
 ## Credits
 
-## Credits
-
 Built with: Ollama, Whisper, Faster-Whisper, Piper TTS, simpleaudio, PyAudio, PyQt5, vispy, scipy, Playwright, NumPy, PyYAML, LLaVA, Google Calendar API, google-auth, opencv-python, keyring, phi3:mini, Mistral 7B, DeepSeek Coder 6.7B, Gemini 2.5 Flash
