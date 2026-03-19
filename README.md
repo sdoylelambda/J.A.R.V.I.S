@@ -493,6 +493,7 @@ For any command that involves executing steps, Atlas will:
   playwright install chromium
   playwright install-deps
   ```
+  For Chrome update config.yaml 'use_chrome: true', 'use_firefox: false'
 
 ### Ollama + Local Models
 - [ ] Install Ollama
