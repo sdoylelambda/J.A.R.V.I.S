@@ -16,10 +16,11 @@ args = parser.parse_args()
 with open("config.yaml") as f:
     config = yaml.safe_load(f)
 
-
+# For Termux SSH
 async def run_text_only(config):
     from modules.observer import Observer
     from config.api_keys import set_key_request_callback
+    from prompt_toolkit import PromptSession
 
     class MockFace:
         def set_state(self, s): print(f"[State] {s}")
@@ -36,8 +37,33 @@ async def run_text_only(config):
 
     set_key_request_callback(observer._request_key_via_gui)
 
-    await observer.listen_and_respond()
+    from prompt_toolkit.patch_stdout import patch_stdout
 
+    async def text_input_loop():
+        session = PromptSession()
+        print("\n[Atlas] Text input ready — type commands below")
+        print("[Atlas] Voice input also active via desktop mic\n")
+        while True:
+            try:
+                with patch_stdout():
+                    text = await session.prompt_async(">> ")
+                text = text.strip()
+                if not text:
+                    continue
+                if text.lower() in ["exit", "quit", "q"]:
+                    print("[Atlas] Goodbye, sir.")
+                    sys.exit(0)
+                await observer.handle_brain_command(text)
+            except EOFError:
+                break
+            except KeyboardInterrupt:
+                print("\n[Atlas] Goodbye, sir.")
+                sys.exit(0)
+
+    await asyncio.gather(
+        observer.listen_and_respond(),
+        text_input_loop()
+    )
 
 def run_async(face, config):
     async def main():
