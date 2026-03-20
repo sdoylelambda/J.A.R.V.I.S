@@ -371,63 +371,124 @@ pip install opencv-python
 
 ## Remote Access (SSH)
 
-Atlas can run headlessly over SSH — useful for Android phones, tablets, or any remote terminal.
+Atlas runs headlessly over SSH — control it from your Android phone, tablet, or any terminal.
 ```bash
 python main.py --no-gui
 ```
 
 ### Features
-- Text input loop with clean `>>` prompt — output never breaks your input line
+- Clean `>>` text prompt — Atlas output never interrupts your typing
 - Voice still active via desktop mic and speakers
-- State and caption printed to terminal instead of GUI
+- State and captions printed to terminal instead of GUI
 - PyQt5 not imported — no display required
 - Type `exit`, `quit`, or `q` to stop
 
-## Android Setup
-1. Install **Termux** from F-Droid (not Play Store — Play Store version is outdated)
-2. Install **Tailscale** on both phone and desktop for access anywhere
-3. In Termux:
-```bash
-pkg update
-pkg install openssh
-ssh your_username@your_tailscale_ip -p 22
-cd ~/dev/A.T.L.A.S.
-source .venv/bin/activate
-python main.py --no-gui
-```
+---
 
-### Tailscale Setup (access from anywhere)
-#### On desktop:
+### Android Setup
+
+**Step 1 — Install Termux**
+Install from **F-Droid** (not Play Store — Play Store version is outdated):
+https://f-droid.org/packages/com.termux/
+
+**Step 2 — Install Tailscale (access from anywhere)**
+
+On your desktop:
 ```bash
 curl -fsSL https://tailscale.com/install.sh | sh
 sudo tailscale up
-tailscale ip  # note this IP for SSH
+tailscale ip  # note this IP
 ```
 
-#### On phone:
+On your phone: install **Tailscale** from Play Store and sign in with the same account.
 
+Tailscale creates a private encrypted tunnel — works over WiFi, cellular, anywhere.
+
+**Step 3 — Set up one-command access**
+
+In Termux:
+```bash
+pkg update && pkg install openssh tmux
+
+# create alias
+echo "alias atlas='ssh your_username@your_tailscale_ip'" >> ~/.bashrc
+
+# auto-load on Termux startup
+echo ". ~/.bashrc" >> ~/.bash_profile
 ```
-Install Tailscale from Play Store
-Sign in with same account
-Enable the VPN when prompted
 
-Install Tailscale from Play Store on phone, sign in with same account.
-Works from any network — WiFi, cellular, anywhere with data.
+On your desktop, add to `~/.bashrc` so Atlas starts automatically on SSH connect:
+```bash
+nano ~/.bashrc
+```
+Add at the bottom:
+```bash
+if [ -n "$SSH_CONNECTION" ]; then
+    cd ~/dev/A.T.L.A.S.
+    source .venv/bin/activate
+    exec python main.py --no-gui
+fi
 ```
 
-#### Text Input
+**Step 4 — Connect**
 
+Just type in Termux:
+```bash
+atlas
 ```
 
+Atlas connects and starts automatically. Every time.
+
+---
+
+### Keep Atlas Running After Closing Termux (tmux)
+
+By default Atlas stops when you close Termux. To keep it running in the background:
+```bash
+# on desktop, start Atlas in a tmux session:
+tmux new -s atlas
+python main.py --no-gui
+
+# detach without stopping — Ctrl+B then D
+# reconnect later:
+tmux attach -t atlas
+```
+
+With tmux Atlas runs permanently on your desktop — reconnect from your phone anytime and pick up where you left off.
+
+---
+
+### Text Input Example
+```
 >> what do I have today
 [Atlas] Massage at 2:30 PM, sir.
+
 >> create a flask app
 [Atlas] classifying...
-[Atlas] Creating flask app with common endpoints.
-[Atlas] Project created to projects/flask.py
+[Atlas] Creating Flask app with common endpoints.
+[Atlas] Building it now, sir.
+[Atlas] Done, sir. Code written to workspace/flask_app.py
+
 >> exit
-Disconnects SSH connection and shuts down Atlas
+[Atlas] Goodbye, sir.
 ```
+
+> **Note:** `exit` stops Atlas. To disconnect without stopping Atlas, detach from tmux with `Ctrl+B D`.
+
+---
+
+### Future: Phone as Full Interface
+
+With phone mic, speakers, and camera integrated, the GUI becomes optional:
+```
+Phone mic    → wake word + voice commands
+Desktop GPU  → all AI processing
+Phone speaker → spoken responses
+Phone camera → vision and object recognition
+```
+
+An always-on AI assistant accessible from anywhere — no screen required.
+See roadmap: FastAPI server → Flutter mobile app.
 
 ---
 
