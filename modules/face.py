@@ -353,16 +353,18 @@ class FaceController(QMainWindow):
     def _handle_mute(self):
         self.muted = not self.muted
         if self.muted:
-            self.mute_btn.setObjectName("mute_btn_active")
             self.mute_btn.setText("🔇  Unmute")
             self.mute_btn.setStyleSheet(
                 "background-color: #2e1a1a; border: 1px solid #ff4444; "
                 "color: #ff6b6b; border-radius: 6px; padding: 8px 16px; font-size: 13px;"
             )
         else:
-            self.mute_btn.setObjectName("mute_btn")
             self.mute_btn.setText("🎤  Mute")
-            self.mute_btn.setStyleSheet("")
+            self.mute_btn.setStyleSheet(
+                f"background-color: {self.config.get('gui', {}).get('button_bg', '#1a1a2e')}; "
+                f"border: 1px solid {self.config.get('gui', {}).get('button_border', '#2a2a4e')}; "
+                "color: #c8d8e8; border-radius: 6px; padding: 8px 16px; font-size: 13px;"
+            )
         if self.on_mute:
             self.on_mute(self.muted)
 
