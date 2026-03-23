@@ -151,7 +151,7 @@ class Observer:
                 # 🔑 Wake hot words
                 wake_word = self.config.get("personalize", {}).get("ai_assistant_name", "atlas").lower()
 
-                if wake_word in text or "you there" in text or "wake up" in text or "Atlas" in text:
+                if wake_word in text or "you there" in text or "wake up" in text or "atlas" in text:
                     if self.paused:
                         self.paused = False
                         self.face.set_state("thinking")
