@@ -94,6 +94,10 @@ class Observer:
                     print(f"[STT] Hallucination detected, skipping: {text[:50]}")
                     continue
 
+                if len(words) >= 3 and len(unique) == 1:
+                    print(f"[STT] Repetition hallucination detected, skipping: {text[:50]}")
+                    continue
+
                 # filter useless single words that aren't commands
                 known_short = [
                     # cancel/control
