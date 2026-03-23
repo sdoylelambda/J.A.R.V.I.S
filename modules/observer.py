@@ -180,7 +180,27 @@ class Observer:
 
                 # 📅 Calendar commands
                 if self.calendar:
-                    # 📅 Create event
+                    # 📅 Read intent — check BEFORE create intent
+                    read_phrases = [
+                        "what's on my calendar", "what is on my calendar",
+                        "check my calendar", "show my calendar",
+                        "what do i have", "what's on my schedule"
+                    ]
+                    if any(phrase in text for phrase in read_phrases):
+                        if any(w in text for w in ["this week", "upcoming", "week"]):
+                            events = await asyncio.to_thread(self.calendar.get_upcoming_events, 7)
+                            await self.say(self.calendar.format_events_for_speech(events, multi_day=True),
+                                           next_state="listening")
+                        elif any(w in text for w in ["tomorrow", "tomorrow's"]):
+                            events = await asyncio.to_thread(self.calendar.get_tomorrows_events)
+                            await self.say(self.calendar.format_events_for_speech(events), next_state="listening")
+                        else:
+                            # default to today
+                            events = await asyncio.to_thread(self.calendar.get_todays_events)
+                            await self.say(self.calendar.format_events_for_speech(events), next_state="listening")
+                        continue
+
+                    # 📅 Create intent — only if explicit add/schedule word present
                     if any(phrase in text for phrase in [
                         "add ", "schedule ", "create event", "new event",
                         "new appointment", "remind me", "set a reminder"
@@ -189,6 +209,7 @@ class Observer:
                         "thursday", "friday", "saturday", "sunday",
                         "tonight", "this evening", "next week"
                     ]):
+
                         # try to parse directly first
                         parsed = self.calendar.parse_event_from_text(text)
 
@@ -275,7 +296,7 @@ class Observer:
                             await self.say(self.calendar.format_events_for_speech(events), next_state="listening")
                             continue
 
-                        if any(w in text for w in ["next meeting", "next event", "what's next"]):
+                        if any(w in text for w in ["next meeting", "next event", "what's next", "next appointment"]):
                             event = await asyncio.to_thread(self.calendar.get_next_event)
                             response = self.calendar.format_events_for_speech(
                                 [event]) if event else "Nothing coming up, sir."
