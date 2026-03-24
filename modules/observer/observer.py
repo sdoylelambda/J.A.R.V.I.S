@@ -13,7 +13,7 @@ from modules.browser_controller import BrowserController
 from modules.utils import timer
 from modules.calendar_module import CalendarModule
 from modules.eyes import Eyes
-from config.api_keys import get_api_key, set_key_request_callback
+from config.api_keys import set_key_request_callback
 from custom_exceptions import PermissionRequired, ModelUnavailable, PlanExecutionError
 
 
@@ -26,6 +26,7 @@ class Observer:
         self.paused = False
         self.cancelled = False
         self._processing = False
+        self._text_command_queue = asyncio.Queue()
         self._last_spoken = ""
         self._last_spoken_time = 0
         self._finishing = False
@@ -71,64 +72,64 @@ class Observer:
                 elif not self._processing and not self._finishing:
                     self.face.set_state("listening")
 
-                # 🎧 Listen
-                audio_bytes, duration = await self.ears.listen()
+                # check for text input before listening to mic
+                try:
+                    text = self._text_command_queue.get_nowait()
+                    print(f"[Observer] Text command: {text}")
+                except asyncio.QueueEmpty:
+                    # normal voice path
+                    audio_bytes, duration = await self.ears.listen()
+                    if not audio_bytes:
+                        await asyncio.sleep(0.05)
+                        continue
+                    with timer("STT", self.debug):
+                        text = self.stt.transcribe(audio_bytes, duration)
+                    if not text:
+                        continue
+                    text = text.lower().strip()
 
-                if not audio_bytes:
-                    await asyncio.sleep(0.05)
-                    continue
+                    # filter hallucinations
+                    words = text.split()
+                    unique = set(words)
+                    if len(unique) <= 2 and len(words) > 6:
+                        print(f"[STT] Hallucination detected, skipping: {text[:50]}")
+                        continue
 
-                # 🧠 STT
-                with timer("STT", self.debug):
-                    text = self.stt.transcribe(audio_bytes, duration)
+                    if len(words) >= 3 and len(unique) == 1:
+                        print(f"[STT] Repetition hallucination detected, skipping: {text[:50]}")
+                        continue
 
-                if not text:
-                    continue
+                    # filter useless single words that aren't commands
+                    known_short = [
+                        # cancel/control
+                        "yes", "no", "cancel", "stop", "pause",
+                        "never mind", "forget it", "escape", "deselect",
+                        "first", "second", "third", "forth", "fifth", "break"
+                        # browser navigation
+                                                                      "zoom in", "zoom out", "zoom reset", "go down", "go up", "go back", "go forward",
+                        "new tab", "close tab", "refresh", "reload", "new window"
+                                                                     "full screen", "fullscreen", "find", "search on page",
+                        "scroll up", "scroll down", "next", "enter", "press enter",
+                        "copy", "paste", "select", "click", "escape",
+                        # app shortcuts
+                        "save", "run", "clear",
+                        # build commands
+                        "yeah", "yep", "do",  "it", "proceed",
+                        "sure", "go", "ahead", "affirmative", "correct",
+                        "build", "sounds", "good"
+                        # calendar commands
+                                           "today's events", "next event", "what's next", "this week", "upcoming events"
+                    ]
+                    if len(words) <= 1 and not any(cmd in text for cmd in known_short):
+                        print(f"[STT] Too short, skipping: {text}")
+                        continue
 
-                text = text.lower().strip()
-
-                # filter hallucinations
-                words = text.split()
-                unique = set(words)
-                if len(unique) <= 2 and len(words) > 6:
-                    print(f"[STT] Hallucination detected, skipping: {text[:50]}")
-                    continue
-
-                if len(words) >= 3 and len(unique) == 1:
-                    print(f"[STT] Repetition hallucination detected, skipping: {text[:50]}")
-                    continue
-
-                # filter useless single words that aren't commands
-                known_short = [
-                    # cancel/control
-                    "yes", "no", "cancel", "stop", "pause",
-                    "never mind", "forget it", "escape", "deselect",
-                    "first", "second", "third", "forth", "fifth", "break"
-                    # browser navigation
-                                                                  "zoom in", "zoom out", "zoom reset", "go down", "go up", "go back", "go forward",
-                    "new tab", "close tab", "refresh", "reload", "new window"
-                                                                 "full screen", "fullscreen", "find", "search on page",
-                    "scroll up", "scroll down", "next", "enter", "press enter",
-                    "copy", "paste", "select", "click", "escape",
-                    # app shortcuts
-                    "save", "run", "clear",
-                    # build commands
-                    "yeah", "yep", "do",  "it", "proceed",
-                    "sure", "go", "ahead", "affirmative", "correct",
-                    "build", "sounds", "good"
-                    # calendar commands
-                                       "today's events", "next event", "what's next", "this week", "upcoming events"
-                ]
-                if len(words) <= 1 and not any(cmd in text for cmd in known_short):
-                    print(f"[STT] Too short, skipping: {text}")
-                    continue
-
-                # filter echo of last spoken phrase
-                if (self._last_spoken and
-                        time.time() - self._last_spoken_time < 5.0 and
-                        self._similarity(text, self._last_spoken) > 0.6):
-                    print(f"[Observer] Echo detected, skipping: {text[:50]}")
-                    continue
+                    # filter echo of last spoken phrase
+                    if (self._last_spoken and
+                            time.time() - self._last_spoken_time < 5.0 and
+                            self._similarity(text, self._last_spoken) > 0.6):
+                        print(f"[Observer] Echo detected, skipping: {text[:50]}")
+                        continue
 
                 print(f"[Heard]: {text}")
                 self.face.set_heard(text)
@@ -180,206 +181,15 @@ class Observer:
 
                 # 📅 Calendar commands
                 if self.calendar:
-                    # 📅 Read intent — check BEFORE create intent
-                    read_phrases = [
-                        "what's on my calendar", "what is on my calendar",
-                        "check my calendar", "show my calendar",
-                        "what do i have", "what's on my schedule"
-                    ]
-                    if any(phrase in text for phrase in read_phrases):
-                        if any(w in text for w in ["this week", "upcoming", "week"]):
-                            events = await asyncio.to_thread(self.calendar.get_upcoming_events, 7)
-                            await self.say(self.calendar.format_events_for_speech(events, multi_day=True),
-                                           next_state="listening")
-                        elif any(w in text for w in ["tomorrow", "tomorrow's"]):
-                            events = await asyncio.to_thread(self.calendar.get_tomorrows_events)
-                            await self.say(self.calendar.format_events_for_speech(events), next_state="listening")
-                        else:
-                            # default to today
-                            events = await asyncio.to_thread(self.calendar.get_todays_events)
-                            await self.say(self.calendar.format_events_for_speech(events), next_state="listening")
+                    # 📅 Calendar commands
+                    from modules.observer.calendar_handler import handle_calendar_command
+                    if await handle_calendar_command(text, self.calendar, self.say, self.ears, self.stt):
                         continue
-
-                    # 📅 Create intent — only if explicit add/schedule word present
-                    if any(phrase in text for phrase in [
-                        "add ", "schedule ", "create event", "new event",
-                        "new appointment", "remind me", "set a reminder"
-                    ]) and any(w in text for w in [
-                        "today", "tomorrow", "monday", "tuesday", "wednesday",
-                        "thursday", "friday", "saturday", "sunday",
-                        "tonight", "this evening", "next week"
-                    ]):
-
-                        # try to parse directly first
-                        parsed = self.calendar.parse_event_from_text(text)
-
-                        if parsed and parsed.get("time"):
-                            # have enough info — create directly
-                            result = await asyncio.to_thread(
-                                self.calendar.create_event,
-                                parsed["title"],
-                                parsed["date"],
-                                parsed.get("time"),
-                                parsed.get("duration", 60)
-                            )
-                            day_str = "today" if parsed["date"] == datetime.date.today().isoformat() else parsed["date"]
-                            await self.say(
-                                f"Done, sir. {parsed['title']} added on {day_str} at {parsed.get('time')}.",
-                                next_state="listening"
-                            )
-                        elif parsed and not parsed.get("time"):
-                            # have title and date but no time — ask for time only
-                            await self.say("What time, sir?")
-                            audio_bytes, dur = await self.ears.listen()
-                            time_text = self.stt.transcribe(audio_bytes, dur).lower().strip() if audio_bytes else ""
-                            combined = f"{text} {time_text}"
-                            parsed = self.calendar.parse_event_from_text(combined)
-                            if parsed:
-                                result = await asyncio.to_thread(
-                                    self.calendar.create_event,
-                                    parsed["title"],
-                                    parsed["date"],
-                                    parsed.get("time"),
-                                    parsed.get("duration", 60)
-                                )
-                                await self.say(
-                                    f"Done, sir. {parsed['title']} added.",
-                                    next_state="listening"
-                                )
-                            else:
-                                await self.say("Sorry sir, I couldn't parse that. Please try again.",
-                                               next_state="listening")
-                        else:
-                            # not enough info — guided flow
-                            await self.say("What's the title of the event, sir?")
-                            audio_bytes, dur = await self.ears.listen()
-                            title = self.stt.transcribe(audio_bytes, dur).lower().strip() if audio_bytes else ""
-
-                            await self.say("What day, sir?")
-                            audio_bytes, dur = await self.ears.listen()
-                            day_text = self.stt.transcribe(audio_bytes, dur).lower().strip() if audio_bytes else ""
-
-                            await self.say("What time, sir?")
-                            audio_bytes, dur = await self.ears.listen()
-                            time_text = self.stt.transcribe(audio_bytes, dur).lower().strip() if audio_bytes else ""
-
-                            combined = f"{title} {day_text} {time_text}"
-                            parsed = self.calendar.parse_event_from_text(combined)
-
-                            if parsed:
-                                result = await asyncio.to_thread(
-                                    self.calendar.create_event,
-                                    parsed["title"],
-                                    parsed["date"],
-                                    parsed.get("time"),
-                                    parsed.get("duration", 60)
-                                )
-                                await self.say(f"Done, sir. {parsed['title']} added.", next_state="listening")
-                            else:
-                                await self.say("Sorry sir, I wasn't able to create that event.", next_state="listening")
-
-                        continue
-
-                    calendar_words = ["today", "schedule", "events", "calendar", "this week", "upcoming",
-                                      "next meeting", "next event"]
-
-                    if any(phrase in text for phrase in calendar_words):
-                        if any(w in text for w in ["this week", "upcoming", "week"]):
-                            events = await asyncio.to_thread(self.calendar.get_upcoming_events, 7)
-                            await self.say(self.calendar.format_events_for_speech(events, multi_day=True),
-                                           next_state="listening")
-                            continue
-
-
-                        if any(w in text for w in ["tomorrow", "tomorrow's"]):
-                            events = await asyncio.to_thread(self.calendar.get_tomorrows_events)
-                            await self.say(self.calendar.format_events_for_speech(events), next_state="listening")
-                            continue
-
-                        if any(w in text for w in ["next meeting", "next event", "what's next", "next appointment"]):
-                            event = await asyncio.to_thread(self.calendar.get_next_event)
-                            response = self.calendar.format_events_for_speech(
-                                [event]) if event else "Nothing coming up, sir."
-                            await self.say(response, next_state="listening")
-                            continue
-
-                        if any(w in text for w in ["today", "schedule today", "my schedule"]):
-                            events = await asyncio.to_thread(self.calendar.get_todays_events)
-                            await self.say(self.calendar.format_events_for_speech(events), next_state="listening")
-                            continue
 
                 # 👁️ Vision commands
                 if self.eyes:
-                    if self.debug:
-                        print(f"[Eyes] checking text: '{text}' eyes={self.eyes}")
-
-                    if any(phrase in text for phrase in [
-                        "what do you see", "what can you see", "what's in front",
-                        "describe what you see", "look around", "describe the scene",
-                        "what's in the room", "what's around", "describe my workspace",
-                        "what's on my desk", "what's behind me", "take a picture", "take a photo"
-                    ]):
-                        self.face.set_caption("looking...")
-                        result = await self._vision_check_and_analyze(self.eyes.describe_scene)
-                        await self.say(result, next_state="listening")
-                        continue
-
-                    if any(phrase in text for phrase in [
-                        "what am i holding", "what is this", "identify this",
-                        "what's this object", "what object is this"
-                    ]):
-                        self.face.set_caption("identifying...")
-                        result = await self._vision_check_and_analyze(self.eyes.identify_object)
-                        await self.say(result, next_state="listening")
-                        continue
-
-                    if any(phrase in text for phrase in [
-                        "read this", "what does this say", "read the text",
-                        "what's written", "transcribe this", "read this document",
-                        "what does this paper say", "read the text on screen"
-                    ]):
-                        self.face.set_caption("reading...")
-                        result = await self._vision_check_and_analyze(self.eyes.read_document)
-                        await self.say(result, next_state="listening")
-                        continue
-
-                    if any(phrase in text for phrase in [
-                        "is anyone there", "is someone there", "anyone in the room",
-                        "is there someone", "who's there", "who is in the room",
-                        "how many people", "is anyone looking", "anyone here"
-                    ]):
-                        self.face.set_caption("checking...")
-                        result = await self._vision_check_and_analyze(self.eyes.count_people)
-                        await self.say(result, next_state="listening")
-                        continue
-
-                    if any(phrase in text for phrase in [
-                        "what am i doing", "what are they doing", "what's happening",
-                        "describe the activity", "what is this person doing"
-                    ]):
-                        self.face.set_caption("observing...")
-                        result = await self._vision_check_and_analyze(self.eyes.describe_activity)
-                        await self.say(result, next_state="listening")
-                        continue
-
-                    if any(phrase in text for phrase in [
-                        "what color is this", "what colour is this",
-                        "what color am i", "what colour am i"
-                    ]):
-                        self.face.set_caption("analyzing color...")
-                        result = await self._vision_check_and_analyze(self.eyes.identify_color)
-                        await self.say(result, next_state="listening")
-                        continue
-
-                    if any(phrase in text for phrase in [
-                        "do you see", "can you see", "is there a", "is there an",
-                        "does this look", "does this seem", "what does this look like"
-                    ]):
-                        self.face.set_caption("looking...")
-                        result = await self._vision_check_and_analyze(
-                            lambda: self.eyes.analyze_with_question(text)
-                        )
-                        await self.say(result, next_state="listening")
+                    from modules.observer.eyes_handler import handle_vision_command
+                    if await handle_vision_command(text, self.face, self.mouth, self.eyes, self.debug):
                         continue
 
                 # 🚀 Command handling
@@ -409,13 +219,6 @@ class Observer:
                 await asyncio.sleep(2)  # show error face for 2 seconds before going back to listening
 
             await asyncio.sleep(0.01)
-
-    async def _vision_check_and_analyze(self, analyze_fn) -> str:
-        warning = self.eyes.check_storage()
-        if warning:
-            await self.say(warning)
-        self.face.set_state("thinking")
-        return await asyncio.to_thread(analyze_fn)
 
     async def handle_brain_command(self, command: str):
         """Main entry point for brain commands."""
@@ -527,12 +330,18 @@ class Observer:
 
         self.face.set_caption("waiting for confirmation...")
 
-        audio_bytes, duration = await self.ears.listen()
-        response = self.stt.transcribe(audio_bytes, duration).lower().strip() if audio_bytes else ""
+        await asyncio.sleep(3.5)
+
+        try:
+            response = self._text_command_queue.get_nowait()
+            print(f"[Observer] Text command: {response}")
+        except asyncio.QueueEmpty:
+            audio_bytes, duration = await self.ears.listen()
+            response = self.stt.transcribe(audio_bytes, duration).lower().strip() if audio_bytes else ""
         print(f"[Heard] {response}")
 
         confirmed = any(w in response for w in [
-            "yes", "yeah", "yep", "do", "it", "proceed",
+            "y", "yes", "yeah", "yep", "do", "it", "proceed",
             "sure", "ahead", "affirmative", "correct",
             "build", "sounds", "good"
         ])
@@ -579,11 +388,19 @@ class Observer:
             f"This command needs to go to {e.model_key}. "
             f"Say yes to send it or no to cancel."
         )
-        audio_bytes, duration = await self.ears.listen()
-        response = self.stt.transcribe(audio_bytes, duration).lower().strip() if audio_bytes else ""
 
-        if any(w in response for w in ["yes", "yeah", "yep", "do it", "send", "sure"]):
+        await asyncio.sleep(2)
+
+        try:
+            response = self._text_command_queue.get_nowait()
+            print(f"[Observer] Text command: {response}")
+        except asyncio.QueueEmpty:
+            audio_bytes, duration = await self.ears.listen()
+            response = self.stt.transcribe(audio_bytes, duration).lower().strip() if audio_bytes else ""
+
+        if any(w in response for w in ["y", "yes", "yeah", "yep", "do it", "send", "sure"]):
             # temporarily disable permission check
+            print(f"[STT Raw] '{response}'")
             original = self.brain.api_models[e.model_key].get("ask_permission")
             self.brain.api_models[e.model_key]["ask_permission"] = False
             try:
@@ -735,6 +552,7 @@ class Observer:
             "I can open applications, control your browser, search the web, and navigate pages. "
             "I can create files and folders, and generate code in Python, JavaScript, HTML, and more. "
             "I can read files, run scripts, and manage your workspace. "
+            "I can run on your Android device and send complex commands to your computer. "
         )
 
         if self.eyes:
