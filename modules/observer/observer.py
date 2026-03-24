@@ -13,7 +13,7 @@ from modules.browser_controller import BrowserController
 from modules.utils import timer
 from modules.calendar_module import CalendarModule
 from modules.eyes import Eyes
-from config.api_keys import get_api_key, set_key_request_callback
+from config.api_keys import set_key_request_callback
 from custom_exceptions import PermissionRequired, ModelUnavailable, PlanExecutionError
 
 
@@ -310,76 +310,8 @@ class Observer:
 
                 # 👁️ Vision commands
                 if self.eyes:
-                    if self.debug:
-                        print(f"[Eyes] checking text: '{text}' eyes={self.eyes}")
-
-                    if any(phrase in text for phrase in [
-                        "what do you see", "what can you see", "what's in front",
-                        "describe what you see", "look around", "describe the scene",
-                        "what's in the room", "what's around", "describe my workspace",
-                        "what's on my desk", "what's behind me", "take a picture", "take a photo"
-                    ]):
-                        self.face.set_caption("looking...")
-                        result = await self._vision_check_and_analyze(self.eyes.describe_scene)
-                        await self.say(result, next_state="listening")
-                        continue
-
-                    if any(phrase in text for phrase in [
-                        "what am i holding", "what is this", "identify this",
-                        "what's this object", "what object is this"
-                    ]):
-                        self.face.set_caption("identifying...")
-                        result = await self._vision_check_and_analyze(self.eyes.identify_object)
-                        await self.say(result, next_state="listening")
-                        continue
-
-                    if any(phrase in text for phrase in [
-                        "read this", "what does this say", "read the text",
-                        "what's written", "transcribe this", "read this document",
-                        "what does this paper say", "read the text on screen"
-                    ]):
-                        self.face.set_caption("reading...")
-                        result = await self._vision_check_and_analyze(self.eyes.read_document)
-                        await self.say(result, next_state="listening")
-                        continue
-
-                    if any(phrase in text for phrase in [
-                        "is anyone there", "is someone there", "anyone in the room",
-                        "is there someone", "who's there", "who is in the room",
-                        "how many people", "is anyone looking", "anyone here"
-                    ]):
-                        self.face.set_caption("checking...")
-                        result = await self._vision_check_and_analyze(self.eyes.count_people)
-                        await self.say(result, next_state="listening")
-                        continue
-
-                    if any(phrase in text for phrase in [
-                        "what am i doing", "what are they doing", "what's happening",
-                        "describe the activity", "what is this person doing"
-                    ]):
-                        self.face.set_caption("observing...")
-                        result = await self._vision_check_and_analyze(self.eyes.describe_activity)
-                        await self.say(result, next_state="listening")
-                        continue
-
-                    if any(phrase in text for phrase in [
-                        "what color is this", "what colour is this",
-                        "what color am i", "what colour am i"
-                    ]):
-                        self.face.set_caption("analyzing color...")
-                        result = await self._vision_check_and_analyze(self.eyes.identify_color)
-                        await self.say(result, next_state="listening")
-                        continue
-
-                    if any(phrase in text for phrase in [
-                        "do you see", "can you see", "is there a", "is there an",
-                        "does this look", "does this seem", "what does this look like"
-                    ]):
-                        self.face.set_caption("looking...")
-                        result = await self._vision_check_and_analyze(
-                            lambda: self.eyes.analyze_with_question(text)
-                        )
-                        await self.say(result, next_state="listening")
+                    from modules.observer.eyes_observer import handle_vision_command
+                    if await handle_vision_command(text, self.face, self.mouth, self.eyes, self.debug):
                         continue
 
                 # 🚀 Command handling
@@ -409,13 +341,6 @@ class Observer:
                 await asyncio.sleep(2)  # show error face for 2 seconds before going back to listening
 
             await asyncio.sleep(0.01)
-
-    async def _vision_check_and_analyze(self, analyze_fn) -> str:
-        warning = self.eyes.check_storage()
-        if warning:
-            await self.say(warning)
-        self.face.set_state("thinking")
-        return await asyncio.to_thread(analyze_fn)
 
     async def handle_brain_command(self, command: str):
         """Main entry point for brain commands."""
