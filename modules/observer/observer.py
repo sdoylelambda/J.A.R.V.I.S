@@ -389,6 +389,8 @@ class Observer:
             f"Say yes to send it or no to cancel."
         )
 
+        self.face.set_caption("waiting for confirmation...")
+
         await asyncio.sleep(2)
 
         try:
