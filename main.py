@@ -21,24 +21,20 @@ async def run_text_only(config):
     from modules.observer import Observer
     from config.api_keys import set_key_request_callback
     from prompt_toolkit import PromptSession
+    from prompt_toolkit.patch_stdout import patch_stdout
 
     class MockFace:
         def __init__(self):
             self._current_state = None
-
         def set_state(self, s):
             if s == self._current_state:
                 return
             self._current_state = s
             if s in ["error", "sleeping"]:
                 print(f"[State] {s}")
-
         def set_caption(self, t):
             if t: print(f"[Atlas] {t}")
-
-        def set_heard(self, t):
-            print(f"[Heard] {t}")
-
+        def set_heard(self, t): print(f"[Heard] {t}")
         on_cancel = None
         on_mute = None
         on_command = None
@@ -48,8 +44,6 @@ async def run_text_only(config):
     observer = Observer(face, window_controller, config)
 
     set_key_request_callback(observer._request_key_via_gui)
-
-    from prompt_toolkit.patch_stdout import patch_stdout
 
     async def text_input_loop():
         session = PromptSession()
@@ -65,7 +59,8 @@ async def run_text_only(config):
                 if text.lower() in ["exit", "quit", "q"]:
                     print("[Atlas] Goodbye, sir.")
                     sys.exit(0)
-                await observer.handle_brain_command(text)
+                # ← route through queue so keyword layer runs
+                await observer._text_command_queue.put(text.lower().strip())
             except EOFError:
                 break
             except KeyboardInterrupt:
