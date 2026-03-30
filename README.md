@@ -329,8 +329,26 @@ Atlas will calibrate the microphone noise floor, open the GUI, then say **"Hello
 | `schedule a meeting tomorrow at 9:30am` | Create event                         |
 | `add an event`                          | Guided flow — Atlas asks for details |
 
-### Calendar Setup
-Atlas uses Google Calendar API with OAuth2. On first use a browser window will open for Google login. Approve access and the token is saved permanently — never asked again.
+### Gmail
+| Say                       | Result                                                                                 |
+|---------------------------|----------------------------------------------------------------------------------------|
+| `check my emails`         | Checks last 5 emails                                                                   |
+| `any new emails`          | Checks last 5 emails                                                                   |
+| `anything important`      | Mistral determines importance                                                          |
+| `anything urgent`         | Mistral determines importance                                                          |
+| `analyze my inbox`        | Mistral determines importance                                                          |
+| `emails from {name}`      | Checks for emails from {name}                                                          |
+| `email from {name}`       | Checks for email from {name}                                                           |
+| `read that email`         | Reads specific email                                                                   |
+| `read the first email`    | Reads last email                                                                       |
+| `reply to {name}`         | Creats a draft with generated message                                                  |
+| `respond to {name}`       | Creats a draft with generated message                                                  |
+| `send an email to {name}` | Guided flow — Atlas asks for details                                                   |
+| `check for meetings`      | Atlas checks for meetings then drafts response and schdules on calendar after apporval |
+| `any invites`             | Atlas checks for meetings then drafts response and schdules on calendar after apporval |
+
+### Calendar/Gmail Setup
+Atlas uses Google Calendar/Gmail API with OAuth2. On first use a browser window will open for Google login. Approve access and the token is saved permanently — never asked again.
 
 Credentials and token are stored outside the project:
 ```
@@ -490,6 +508,7 @@ Atlas can run directly on Android using proot-distro — no desktop required for
 phi3:mini local inference  ✅  ~5 second responses
 Text input via >> prompt   ✅
 Calendar integration       ✅
+Gmail integration       ✅
 Gemini API                 ✅
 Brain/LLM routing          ✅
 Voice input/output         ❌  use_mock: true (text only)
@@ -986,6 +1005,10 @@ integrations:
     enabled: true
     credentials_path: "~/.config/atlas/google_calendar_credentials.json"
     token_path: "~/.config/atlas/google_calendar_token.json"
+  gmail:
+    enabled: true
+    check_interval_minutes: 5
+    importance_threshold: 0.7
 
 # ---- Memory ----
 memory:
@@ -1175,4 +1198,4 @@ pytest tests/ --cov=modules --cov-report=term-missing
 
 ## Credits
 
-Built with: Ollama, Whisper, Faster-Whisper, Piper TTS, simpleaudio, PyAudio, PyQt5, vispy, scipy, Playwright, NumPy, PyYAML, LLaVA, Google Calendar API, google-auth, opencv-python, keyring, phi3:mini, Mistral 7B, DeepSeek Coder 6.7B, Gemini 2.5 Flash
+Built with: Ollama, Whisper, Faster-Whisper, Piper TTS, simpleaudio, PyAudio, PyQt5, vispy, scipy, Playwright, NumPy, PyYAML, LLaVA, Google Calendar API, Gmail API, google-auth, opencv-python, keyring, phi3:mini, Mistral 7B, DeepSeek Coder 6.7B, Gemini 2.5 Flash
