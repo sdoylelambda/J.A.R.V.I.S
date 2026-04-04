@@ -74,6 +74,37 @@ async def handle_vision_command(text: str, face, mouth, eyes, debug: bool = Fals
         await analyze("looking...", lambda: eyes.analyze_with_question(text))
         return True
 
+    # screen capture
+    if any(phrase in text for phrase in [
+        "take a look at my screen", "what's on my screen", "whats on my screen"
+        "look at my screen", "analyze my screen",
+        "what am i looking at", "what's on screen"
+    ]):
+        face.set_caption("capturing screen...")
+        result = await eyes.analyze_screen()
+        await _say(face, mouth, result, next_state="listening")
+        return True
+
+    # latest screenshot
+    if any(phrase in text for phrase in [
+        "analyze last screenshot", "look at my screenshot",
+        "analyze screenshot", "what's in my screenshot",
+        "last screenshot", "recent screenshot"
+    ]):
+        face.set_caption("analyzing screenshot...")
+        result = await asyncio.to_thread(eyes.analyze_screenshot)
+        await _say(face, mouth, result, next_state="listening")
+        return True
+
+    # screen + specific question
+    if "screen" in text and any(phrase in text for phrase in [
+        "what is", "explain", "describe", "summarize", "what does"
+    ]):
+        face.set_caption("analyzing screen...")
+        result = await asyncio.to_thread(eyes.analyze_screen, text)
+        await _say(face, mouth, result, next_state="listening")
+        return True
+
     return False
 
 
