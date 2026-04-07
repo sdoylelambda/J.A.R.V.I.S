@@ -28,7 +28,8 @@ class Brain:
     # ─── core query method ───────────────────────────────────────────────
 
     def query(self, prompt: str, model_key: str = "orchestrator",
-              system: str = None, num_ctx_override: int = None) -> str:
+              system: str = None, num_ctx_override: int = None,
+              max_tokens_override: int = None) -> str:
         """Single entry point for all LLM calls."""
 
         # local ollama models
@@ -45,9 +46,9 @@ class Brain:
                 options={
                     "num_ctx": int(num_ctx_override or cfg.get("num_ctx", 512)),
                     "temperature": float(cfg.get("temperature", 0.1)),
-                    "num_predict": int(cfg.get("max_tokens", 500)),
-                }
-            )
+                    "num_predict": int(max_tokens_override or cfg.get("max_tokens", 500)),
+            }
+        )
             return response["message"]["content"]
 
         # claude api
@@ -379,7 +380,7 @@ class Brain:
         ]
 
         # also check for file extensions in command
-        code_extensions = [".py", ".js", ".jsx", ".ts", ".tsx", ".html", ".css", ".dart"]
+        code_extensions = [".py", ".js", ".jsx", ".ts", ".tsx", ".html", ".css", ".dart", ".pdf"]
         has_code_extension = any(ext in command_lower for ext in code_extensions)
 
         is_code = any(kw in command_lower for kw in code_keywords) or has_code_extension

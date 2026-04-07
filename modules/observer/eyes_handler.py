@@ -92,7 +92,7 @@ async def handle_vision_command(text: str, face, mouth, eyes, debug: bool = Fals
         "last screenshot", "recent screenshot"
     ]):
         face.set_caption("analyzing screenshot...")
-        result = await asyncio.to_thread(eyes.analyze_screenshot)
+        result = await eyes.analyze_screenshot()
         await _say(face, mouth, result, next_state="listening")
         return True
 
@@ -101,7 +101,7 @@ async def handle_vision_command(text: str, face, mouth, eyes, debug: bool = Fals
         "what is", "explain", "describe", "summarize", "what does"
     ]):
         face.set_caption("analyzing screen...")
-        result = await asyncio.to_thread(eyes.analyze_screen, text)
+        result = await eyes.analyze_screen()
         await _say(face, mouth, result, next_state="listening")
         return True
 
