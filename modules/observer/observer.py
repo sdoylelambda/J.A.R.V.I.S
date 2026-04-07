@@ -206,6 +206,11 @@ class Observer:
                     if await handle_vision_command(text, self.face, self.mouth, self.eyes, self.debug):
                         continue
 
+                # 📄 Document commands
+                from modules.observer.document_handler import handle_document_command
+                if await handle_document_command(text, self.face, self.mouth, self.brain, self.debug):
+                    continue
+
                 # 🚀 Command handling
                 self.face.set_state("thinking")
                 try:
@@ -566,6 +571,7 @@ class Observer:
             "Quite a few things, sir. "
             "I can answer questions, tell jokes, and hold a conversation. "
             "I can open applications, control your browser, search the web, and navigate pages. "
+            "I can read and summarize PDF documents. "
             "I can create files and folders, and generate code in Python, JavaScript, HTML, and more. "
             "I can read files, run scripts, and manage your workspace. "
             "I can run on your Android device and send complex commands to your computer. "

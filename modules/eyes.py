@@ -286,7 +286,7 @@ class Eyes:
     async def get_latest_screenshot(self) -> str | None:
         """Find and load the most recent screenshot."""
         search_paths = [
-            os.path.expanduser("~/Pictures/Screenshots/*.png"),
+            os.path.expanduser("~/Pictures/*.png"),
             os.path.expanduser("~/Pictures/Screenshots/*.jpg"),
             os.path.expanduser("~/Screenshots/*.png"),
             os.path.expanduser("~/Desktop/*.png"),
