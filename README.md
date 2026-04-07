@@ -147,20 +147,20 @@ All core functionality runs **completely locally** on your machine. No data leav
 - [x] Screen / vision support (LLaVA)
 - [x] Config-driven GUI colors — border, background, text, buttons all configurable via config.yaml
 - [x] Android SSH access via Termux
+- [x] Gmail integration and control
+- [x] Summarize screenshot
 
 ### Planned
 - [ ] Add way user wants to be addressed to config.yaml (sir, ma'am, John, Jane, etc.)
 - [ ] Self-expanding fast keyword layer
 - [ ] RAG over local notes and files
 - [ ] Summarize PDF
-- [ ] Summarize screenshot
 - [ ] Research topic 
 - [ ] FastAPI server — REST/WebSocket interface for mobile clients
 - [ ] Flutter app - Mobile use for Android and iOS - native phone mic, speakers, camera
   - [ ] Phone camera integration via IP Webcam app
 - [ ] Persistent memory and user preferences
 - [ ] Push-to-talk mode
-- [ ] Gmail integration and control
 - [ ] Slack alerts
 - [ ] Text alerts
 - [ ] Follow-up commands
@@ -369,6 +369,33 @@ Credentials and token are stored outside the project:
 ```
 ~/.config/atlas/google_calendar_credentials.json  ← download from Google Cloud Console
 ~/.config/atlas/google_calendar_token.json        ← created automatically on first login
+```
+
+---
+
+### PDF Analyzer 
+| Say                        | Result                          |
+|----------------------------|---------------------------------|
+| `summarize pdf`            | Describes pdf                   |
+| `summarize the pdf`        | Describes pdf                   |
+| `read the pdf`             | Describes pdf                   |
+| `what does the pdf say`    | Describes pdf                   |
+| `summarize last pdf`       | Describes pdf                   |
+| `what's in the pdf`        | Describes pdf                   |
+| `read this pdf`            | Describes pdf                   |
+| `summarize document`       | Describes pdf                   |
+| `summarize last pdf`       | Describes pdf                   |
+| `find in the pdf`          | Finds related info in the pdf   |
+| `search the pdf`           | Finds related info in the pdf   |
+| `look for in the document` | Finds related info in the pdf   |
+| `search the pdf`           | Search for specific info in pdf |
+| `look for in the document` | Search for specific info in pdf |
+
+### PDF Setup
+Atlas uses your pypdf and Mistral running locally via Ollama.
+```bash
+ollama pull mistral
+pip install pypdf
 ```
 
 ---
