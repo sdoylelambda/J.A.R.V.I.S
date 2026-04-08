@@ -1,6 +1,7 @@
 import math
 import numpy as np
 import os
+
 from queue import Queue
 
 WINDOW_POS_FILE = os.path.join(os.path.dirname(__file__), "..", ".window_pos")
@@ -79,7 +80,7 @@ class FaceController(QMainWindow):
         border_width = gui.get("border_width", 2)
         title_color = gui.get("title_color", "#0a1a4a")
         caption = gui.get("caption_color", "#8a9ab8")
-        heard = gui.get("heard_color", "#4499ff")
+        heard = gui.get("heard_color", "#4499ff")  # remove?
         btn_bg = gui.get("button_bg", "#1a1a2e")
         btn_border = gui.get("button_border", "#2a2a4e")
         btn_hover = gui.get("button_hover", "#2a2a4e")

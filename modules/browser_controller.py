@@ -1,7 +1,8 @@
-from playwright.async_api import async_playwright
 import urllib.parse
 import os
 import asyncio
+
+from playwright.async_api import async_playwright
 
 
 class BrowserController:

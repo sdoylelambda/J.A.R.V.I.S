@@ -1,8 +1,9 @@
 import wave
-import simpleaudio as sa
-from piper.voice import PiperVoice
 import io
+import simpleaudio as sa
 import numpy as np
+
+from piper.voice import PiperVoice
 from piper.config import SynthesisConfig
 
 
@@ -14,7 +15,7 @@ class Mouth:
         self._current_play = None
         if not use_mock:
             self.voice = PiperVoice.load(model_path)
-            self.syn_config = SynthesisConfig(
+            self.syn_config = SynthesisConfig(  # add this to config
                 length_scale=speech_rate,  # speed
                 noise_scale=0.5,  # variation in tone (lower = more consistent)
                 noise_w_scale=0.2,  # variation in timing (lower = more consistent)
@@ -25,7 +26,6 @@ class Mouth:
             print(f"[TTS] {text}")
             return
 
-        # print(f"[TTS] {text}")
         try:
             buf = io.BytesIO()
             with wave.open(buf, "wb") as wav_file:

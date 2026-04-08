@@ -1,5 +1,6 @@
-from modules.brain import Brain
 import re
+
+from modules.brain import Brain
 
 
 class EmailDrafter:
@@ -33,7 +34,7 @@ class EmailDrafter:
             response = self.brain.query(prompt, model_key="orchestrator")
             import json
             import re
-            # strip markdown if present
+            # strip mark down if present
             clean = re.sub(r'```json|```', '', response).strip()
             return json.loads(clean)
         except Exception as e:
@@ -149,8 +150,8 @@ class EmailDrafter:
             response = self.brain.query(
                 prompt,
                 model_key="orchestrator",
-                num_ctx_override=2048,
-                max_tokens_override=200
+                num_ctx_override=2048,  # should this be increased?
+                max_tokens_override=200  # should this be increased?
             )
             return self._clean(response)
         except Exception as e:
@@ -208,13 +209,14 @@ class EmailDrafter:
         # ── Helpers ───────────────────────────────────────────────────────────
 
     def _clean(self, text: str) -> str:
-        """Strip markdown from model output."""
+        """Strip mark down from model output."""
         text = re.sub(r'\*+', '', text)
         text = re.sub(r'#{1,6}\s?', '', text)
         text = re.sub(r'`+', '', text)
         text = re.sub(r'\n+', ' ', text)
         return text.strip()
 
+    # overkill?
     # def draft_reply(self, email: dict, instruction: str = None) -> str:
     #     """
     #     Draft a reply to an email using Gemini.

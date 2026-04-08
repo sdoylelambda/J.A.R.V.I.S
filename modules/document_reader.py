@@ -1,3 +1,5 @@
+# Redundant - legacy - remove
+
 def summarize_pdf(self, path: str = None) -> str:
     """Summarize most recent PDF or specified path."""
     import glob
