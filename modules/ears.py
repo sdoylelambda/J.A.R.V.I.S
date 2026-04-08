@@ -220,9 +220,6 @@ class Ears:
             audio_np = np.frombuffer(data, dtype=np.int16)
             rms = np.sqrt(np.mean(audio_np.astype(np.float32) ** 2))
 
-            # if self.debug:
-            #     print(f"[Ears RMS] {int(rms)} speech={speech_started}")
-
             # ---- waiting for speech to start ----
             if not speech_started:
                 if time.time() - start_time > self.pre_speech_timeout:

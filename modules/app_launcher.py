@@ -1,6 +1,4 @@
-import os
 import subprocess
-from modules.browser_controller import BrowserController
 import urllib
 import urllib.parse
 

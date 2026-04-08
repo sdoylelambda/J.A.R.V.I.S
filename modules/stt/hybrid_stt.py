@@ -1,12 +1,14 @@
 import numpy as np
 import whisper
-from faster_whisper import WhisperModel
 import time
 import warnings
+
+from faster_whisper import WhisperModel
+
 warnings.filterwarnings("ignore", category=UserWarning)  # ignore GPU not in use warning
 
-
 SHORT_THRESHOLD_SECONDS = 10  # use whisper for >10s, faster-whisper for shorter
+
 
 class HybridSTT:
     def __init__(self, whisper_model="small", fw_model="small", use_gpu=False):

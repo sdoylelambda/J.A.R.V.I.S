@@ -1,6 +1,5 @@
-import os
 import subprocess
-import json
+
 from pathlib import Path
 from custom_exceptions import PlanExecutionError
 
@@ -135,7 +134,7 @@ class ToolExecutor:
         }
         lang = lang_map.get(ext, "code")
 
-        code = self.brain.query(
+        code = self.brain.query(  # redundant? remove?
             f"Write complete working {lang} code for: {description}.\n"
             f"RULES:\n"
             f"- Return ONLY raw code, nothing else\n"
@@ -148,7 +147,7 @@ class ToolExecutor:
             model_key="code"
         )
 
-        # strip markdown code blocks if model adds them anyway
+        # strip mark down code blocks if model adds them anyway
         if "```" in code:
             lines = code.split("\n")
             lines = [l for l in lines if not l.startswith("```")]

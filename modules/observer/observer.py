@@ -1,7 +1,6 @@
 import time
 import asyncio
 import threading
-import datetime
 
 from modules.ears import Ears
 from modules.mouth import Mouth

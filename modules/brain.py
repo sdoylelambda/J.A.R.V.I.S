@@ -4,7 +4,6 @@ import ollama
 import anthropic
 import textwrap
 
-from config.api_keys import get_api_key
 from anthropic.types import MessageParam
 from google import genai
 from custom_exceptions import PermissionRequired, ModelUnavailable
@@ -109,7 +108,7 @@ class Brain:
         else:
             raise ValueError(f"Unknown model key: {model_key}")
 
-    def quick_answer(self, command: str) -> dict | None:
+    def quick_answer(self, command: str) -> dict | None:  # remove 'open browser'? (shouldn't make it this far)
         """
         phi3 attempts to handle the command directly.
         Returns a result dict if it can handle it, None if it needs Mistral.
