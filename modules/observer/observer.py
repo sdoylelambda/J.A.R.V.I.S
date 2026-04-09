@@ -207,7 +207,8 @@ class Observer:
 
                 # 📄 Document commands
                 from modules.observer.document_handler import handle_document_command
-                if await handle_document_command(text, self.face, self.mouth, self.brain, self.debug):
+                if await handle_document_command(text, self.face, self.mouth, self.brain, self.ears, self.stt, self.say,
+                                                 self.debug):
                     continue
 
                 # 🚀 Command handling

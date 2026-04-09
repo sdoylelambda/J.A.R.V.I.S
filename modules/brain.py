@@ -28,7 +28,7 @@ class Brain:
 
     def query(self, prompt: str, model_key: str = "orchestrator",
               system: str = None, num_ctx_override: int = None,
-              max_tokens_override: int = None) -> str:
+              max_tokens_override: int = None, bypass_permission: bool = False) -> str:
         """Single entry point for all LLM calls."""
 
         # local ollama models
@@ -71,7 +71,7 @@ class Brain:
             cfg = self.api_models["gemini"]
             if not cfg.get("enabled", False):
                 raise ModelUnavailable("gemini")
-            if cfg.get("ask_permission", True):
+            if cfg.get("ask_permission", True) and not bypass_permission:  # ← add check
                 raise PermissionRequired("gemini", prompt)
 
             gemini_api_key = get_api_key("gemini")

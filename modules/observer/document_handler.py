@@ -1,7 +1,6 @@
 import asyncio
 import glob
 import os
-
 from pypdf import PdfReader
 
 
@@ -52,10 +51,9 @@ def extract_pdf_text(path: str, max_pages: int = 10) -> str | None:
         return None
 
 
-def summarize_text(text: str, brain, instruction: str = None) -> str:
-    """Summarize document text using Mistral."""
-    # truncate if too long
-    max_chars = 8000
+def summarize_text(text: str, brain, instruction: str = None, use_gemini: bool = False, bypass_permission: bool = False) -> str:
+    """Summarize document text — Mistral locally or Gemini for deep analysis."""
+    max_chars = 50000 if use_gemini else 8000
     truncated = False
     if len(text) > max_chars:
         text = text[:max_chars]
@@ -66,31 +64,61 @@ def summarize_text(text: str, brain, instruction: str = None) -> str:
     trunc_note = "\n(Note: document was truncated due to length)" if truncated else ""
 
     prompt = f"""Summarize this document concisely for a voice assistant.
-    3-5 sentences max. Plain text only. No markdown. End with 'sir'.{focus}{trunc_note}
-    
-    Document:
-    {text}
-    
-    Summary:"""
+3-5 sentences max. Plain text only. No markdown. End with 'sir'.{focus}{trunc_note}
+
+Document:
+{text}
+
+Summary:"""
+
+    model = "gemini" if use_gemini else "orchestrator"
+    ctx = None if use_gemini else 8192
+    print(f"[Documents] Summarizing with {model}")
 
     try:
         return brain.query(
             prompt,
-            model_key="orchestrator",
-            num_ctx_override=8192,
-            max_tokens_override=300
+            model_key=model,
+            num_ctx_override=ctx,
+            max_tokens_override=300,
+            bypass_permission=bypass_permission
         )
     except Exception as e:
-        print(f"[Documents] Summary error: {e}")
+        print(f"[Documents] {model} error: {e}")
+        if use_gemini:
+            print("[Documents] Gemini failed, falling back to Mistral")
+            return summarize_text(text, brain, instruction, use_gemini=False)
         return "I had trouble summarizing that document, sir."
 
 
 # ── Main handler ──────────────────────────────────────────────────────────────
 
-async def handle_document_command(text: str, face, mouth, brain, debug: bool = False) -> bool:
+async def handle_document_command(text: str, face, mouth, brain, ears=None, stt=None, say=None, debug: bool = False) -> bool:
     """
     Handle document commands. Returns True if handled.
     """
+
+    # detect deep analysis intent
+    use_gemini = any(phrase in text for phrase in [
+        "gemini", "detailed", "deep", "thorough",
+        "take your time", "in detail", "full analysis",
+        "detailed summary", "comprehensive"
+    ])
+
+    if use_gemini:
+        if say:
+            await say(
+                "This will send the document to Gemini for analysis. "
+                "Shall I proceed, sir?"
+            )
+        else:
+            await _say(face, mouth,
+                       "This will send the document to Gemini. Shall I proceed, sir?")
+
+        confirmed = await _listen_for_yes(ears, stt)
+        if not confirmed:
+            await _say(face, mouth, "Using local analysis instead, sir.")
+            use_gemini = False
 
     # ── PDF summarization ─────────────────────────────────────────────────
     if any(phrase in text for phrase in [
@@ -103,14 +131,16 @@ async def handle_document_command(text: str, face, mouth, brain, debug: bool = F
 
         path = await asyncio.to_thread(find_latest_pdf)
         if not path:
-            await _say(face, mouth, "No PDF files found, sir. Try putting one in Downloads or Documents.")
+            await _say(face, mouth,
+                "No PDF files found, sir. Try putting one in Downloads or Documents.")
             return True
 
         face.set_caption("reading PDF...")
         pdf_text = await asyncio.to_thread(extract_pdf_text, path)
         if not pdf_text:
             await _say(face, mouth,
-                "Couldn't extract text from that PDF, sir. It may be a scanned image — try a text-based PDF.")
+                "Couldn't extract text from that PDF, sir. "
+                "It may be a scanned image — try a text-based PDF.")
             return True
 
         # extract focus instruction if any
@@ -120,8 +150,12 @@ async def handle_document_command(text: str, face, mouth, brain, debug: bool = F
                 instruction = text.split(phrase)[-1].strip()
                 break
 
-        face.set_caption("summarizing...")
-        summary = await asyncio.to_thread(summarize_text, pdf_text, brain, instruction)
+        caption = "deep analysis with Gemini..." if use_gemini else "summarizing..."
+        face.set_caption(caption)
+
+        summary = await asyncio.to_thread(
+            summarize_text, pdf_text, brain, instruction, use_gemini, True
+        )
         await _say(face, mouth, summary, next_state="listening")
         return True
 
@@ -144,7 +178,9 @@ async def handle_document_command(text: str, face, mouth, brain, debug: bool = F
             return True
 
         face.set_caption("searching...")
-        summary = await asyncio.to_thread(summarize_text, pdf_text, brain, text)
+        summary = await asyncio.to_thread(
+            summarize_text, pdf_text, brain, text, use_gemini
+        )
         await _say(face, mouth, summary, next_state="listening")
         return True
 
@@ -159,3 +195,22 @@ async def _say(face, mouth, text: str, next_state: str = "listening") -> None:
     with timer("TTS doc", True):
         await mouth.speak(text)
     face.set_state(next_state)
+
+async def _listen_for_yes(ears, stt) -> bool:
+    """Listen for a yes/no confirmation."""
+    if not ears or not stt:
+        print("[Documents] No ears/stt available")
+        return False
+    try:
+        print("[Documents] Listening for confirmation...")
+        await asyncio.sleep(1.5)
+        audio_bytes, dur = await ears.listen()
+        response = stt.transcribe(audio_bytes, dur).lower().strip() if audio_bytes else ""
+        print(f"[Documents] Heard: '{response}'")
+        return any(w in response for w in [
+            "yes", "yeah", "yep", "sure", "do it",
+            "proceed", "go ahead", "affirmative", "send it"
+        ])
+    except Exception as e:
+        print(f"[Documents] Listen error: {e}")
+        return False
