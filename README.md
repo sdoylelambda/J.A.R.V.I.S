@@ -149,17 +149,17 @@ All core functionality runs **completely locally** on your machine. No data leav
 - [x] Android SSH access via Termux
 - [x] Gmail integration and control
 - [x] Summarize screenshot
+- [x] Summarize PDF
 
 ### Planned
 - [ ] Add way user wants to be addressed to config.yaml (sir, ma'am, John, Jane, etc.)
 - [ ] Self-expanding fast keyword layer
 - [ ] RAG over local notes and files
-- [ ] Summarize PDF
 - [ ] Research topic 
 - [ ] FastAPI server — REST/WebSocket interface for mobile clients
 - [ ] Flutter app - Mobile use for Android and iOS - native phone mic, speakers, camera
   - [ ] Phone camera integration via IP Webcam app
-- [ ] Persistent memory and user preferences
+- [ ] Persistent memory and user preferences - https://www.mempalace.tech/ https://github.com/milla-jovovich/mempalace
 - [ ] Push-to-talk mode
 - [ ] Slack alerts
 - [ ] Text alerts
