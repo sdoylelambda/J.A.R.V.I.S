@@ -24,4 +24,6 @@ gmail switch to inbox instead of all mail? --- maybe all mail better.
 
 more tests
 
-pdf - which file is found? should be the most recent timestamp
+PDF - which file is found? should be the most recent timestamp
+
+config.yaml - mobile: mouth, face, and ears disabled
