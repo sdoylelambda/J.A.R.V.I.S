@@ -180,27 +180,121 @@ All core functionality runs **completely locally** on your machine. No data leav
 
 ```
 A.T.L.A.S/
-├── main.py                  # Entry point — PyQt5 app + async Observer thread
-├── config.yaml              # Your local config (gitignored)
-├── config.example.yaml      # Template config to share
-├── custom_exceptions.py     # PermissionRequired, ModelUnavailable, PlanExecutionError
-├── workspace/               # Where Atlas creates files (gitignored)
+├── main.py
+├── config.yaml
+├── config.example.yaml
+├── custom_exceptions.py
+│
 ├── config/
-│      └── api_keys.py      # Secure API key management via OS keyring
+│   └── api_keys.py
+│
 ├── modules/
-│   ├── app_launcher.py      # Fast keyword-based app launching
-│   ├── brain.py             # LLM routing and plan generation
-│   ├── browser_controller.py # Playwright browser automation
-│   ├── calendar_module.py   # Google calendar - check schedule and add events
-│   ├── ears.py              # Microphone input with dynamic noise calibration
-│   ├── eyes.py              # Webcam vision with LLaVA
-│   ├── face.py              # PyQt5 GUI — orb, captions, controls
-│   ├── observer.py          # Main loop — listens, routes, responds, command queue
-│   ├── tool_executor.py     # Executes plans (create files, run scripts, etc.)
-│   ├── tts.py               # Text-to-speech (Piper)
-│   └── stt/
-│       └── hybrid_stt.py    # Speech-to-text (Whisper + Faster-Whisper)
+│   ├── gmail/
+│   │   ├── email_drafter.py
+│   │   ├── email_monitor.py
+│   │   └── gmail_module.py
+│   │
+│   ├── observer/
+│   │   ├── observer.py
+│   │   ├── calendar_handler.py
+│   │   ├── document_handler.py
+│   │   ├── eyes_handler.py
+│   │   └── gmail_handler.py
+│   │
+│   ├── stt/
+│   │   └── hybrid_stt.py
+│   │
+│   ├── voices/
+│   │
+│   ├── app_launcher.py
+│   ├── brain.py
+│   ├── browser_controller.py
+│   ├── calendar_module.py
+│   ├── ears.py
+│   ├── eyes.py
+│   ├── face.py
+│   ├── mouth.py
+│   ├── tool_executor.py
+│   └── window_controller.py
+│
+├── workspace/
+├── screenshots/
+├── notes/
+├── tests/
 ```
+
+---
+
+## Key Components
+
+### 🧠 Core System
+
+- **main.py** — Entry point. Launches the PyQt5 interface and async observer loop.
+- **brain.py** — Handles LLM routing, planning, and decision-making.
+- **observer/** — Central command router.  
+  Interprets voice/text input and dispatches actions to the correct module.
+
+---
+
+### 🎤 Input / Output
+
+- **ears.py** — Microphone input with dynamic noise calibration.
+- **mouth.py** — Text-to-speech using Piper.
+- **face.py** — PyQt5 GUI (orb, expressions, captions, controls).
+- **stt/hybrid_stt.py** — Speech-to-text (Whisper + Faster-Whisper).
+
+---
+
+### 👁️ Vision System
+
+- **eyes.py** — Webcam + screen vision using LLaVA.
+- **eyes_handler.py** — Converts user commands into vision actions.
+- **screenshots/** — Stores captured images for analysis (created at runtime).
+
+---
+
+### 📬 Integrations
+
+- **gmail/**  
+  - `gmail_module.py` — Authentication + core Gmail operations  
+  - `email_monitor.py` — Watches inbox for important messages  
+  - `email_drafter.py` — Generates replies using LLMs  
+
+- **calendar_module.py** — Google Calendar integration  
+- **calendar_handler.py** — Parses user commands into calendar actions  
+
+---
+
+### 🌐 Automation
+
+- **browser_controller.py** — Web automation via Playwright  
+- **window_controller.py** — Controls and navigates desktop applications  
+- **app_launcher.py** — Fast keyword-based app launching  
+- **tool_executor.py** — Executes generated plans (files, scripts, tasks)
+
+---
+
+### 📁 Workspaces & Data
+
+- **workspace/** — User-controlled file operations (gitignored)  
+- **notes/** — Development notes, planned features, known issues  
+- **tests/** — Test scripts and experimental components  
+
+---
+
+### 🔐 Configuration
+
+- **config.yaml** — Local user configuration (not committed)  
+- **config.example.yaml** — Template for setup  
+- **config/api_keys.py** — Secure API key storage via OS keyring  
+
+---
+
+## Notes
+
+- Some directories (e.g., `workspace/`, `screenshots/`) are created automatically on first use.
+- Screenshot storage may grow over time — users are notified when it becomes large.
+- Sensitive data (API keys, config) is never stored directly in the repository.
 
 ---
 

@@ -23,3 +23,5 @@ gmail switch to inbox instead of all mail? --- maybe all mail better.
     what about security risks? as long as not opening attachments = safe?
 
 more tests
+
+pdf - which file is found? should be the most recent timestamp
