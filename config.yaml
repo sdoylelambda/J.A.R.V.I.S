@@ -95,10 +95,10 @@ integrations:
 
 # ---- Memory ----
 memory:
-  enabled: false # enable later when adding FAISS
-  vector_db_path: "./memory/vector_db/"
-  short_term_db: "./memory/short_term.db"
-  recall_top_k: 5
+  enabled: true
+  wing: atlas
+  palace_path: "~/.mempalace/palace"
+  auto_store_conversations: true
 
 # ---- Audio ----
 audio:
