@@ -88,3 +88,52 @@ These are the features that will generate the most interview conversation:
 5. **Flutter mobile app** — turns a desktop app into a platform
 6. **Wake word** — shows audio DSP depth beyond basic mic input
 7. **Screenshot → analyze** — multimodal AI, vision models
+
+---
+
+## Project Structure
+
+```
+A.T.L.A.S/
+├── main.py                  # Entry point — PyQt5 app + async Observer thread
+├── config.yaml              # Your local config (gitignored)
+├── config.example.yaml      # Template config to share
+├── custom_exceptions.py     # PermissionRequired, ModelUnavailable, PlanExecutionError
+├── config/
+│      └── api_keys.py      # Secure API key management via OS keyring
+├── modules/
+│   └── gmail/
+│       ├── email_drafter.py # Drafts email responses with Mistral
+│       ├── email_monitor.py # Monitor emails and notifies user with important emails analyzed by Mistral
+│       └── gmail_module.py  # Authenticate on first run, check emails, write replies, find contacts, etc.
+│   └── observer/
+│       ├── calendar_handler.py # Google calendar. Auth of first run. Extrapolates voice/text commands.
+│       ├── document_handler.py # Extrapolates voice/text commands for analyzing PDF. Finds file automatically.
+│       ├── eyes_handler.py  # Extrapolates voice/text commands for analyzing what computer camera sees.
+│       ├── gmail_handler.py  # Extrapolates voice/text commands for gmail commands.
+│       └── observer.py  # Main loop — listens, routes, responds, command queue
+│   └── stt/
+│       └── hybrid_stt.py    # Speech-to-text (Whisper + Faster-Whisper)
+│   └── voices/
+│       └── voice files      # TTS voice files (Piper)
+│   ├── app_launcher.py      # Fast keyword-based app launching
+│   ├── brain.py             # LLM routing and plan generation
+│   ├── browser_controller.py # Playwright browser automation
+│   ├── calendar_module.py   # Google calendar - check schedule and add events
+│   ├── ears.py              # Microphone input with dynamic noise calibration
+│   ├── eyes.py              # Webcam vision with LLaVA
+│   ├── face.py              # PyQt5 GUI — orb, facial expressions, captions, controls
+│   ├── mouth.py               # Text-to-speech (Piper)
+│   ├── tool_executor.py     # Executes plans (create files, run scripts, etc.)
+│   └── window_controller.py # Voice/text commands for navigating programs
+│   └── notes/
+│       └── note files      # Planned update details. Known errors.
+│   └── screenshots/
+│       └── saved image files # Created on first use. From Llava eyes image analization. Warned when file becomes large.
+│   └── tests/
+│       └── test files      # Test components. See tests section below for more details.
+│   └── workspace/
+│       └── project files      # Created on first use. Stores projects created by Deepseek and other models.
+```
+
+---
