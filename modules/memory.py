@@ -47,7 +47,7 @@ class AtlasMemory:
                 query,
                 palace_path=self.palace_path,
                 wing=self.wing,
-                n=n
+                n_results=n
             )
             if not results:
                 return None
@@ -72,41 +72,78 @@ class AtlasMemory:
     # ── Store ─────────────────────────────────────────────────────────────
 
     def remember(self, text: str, room: str = "general") -> bool:
-        """Store a memory explicitly."""
+        """
+        Store a memory explicitly.
+        TEXT → CHUNK → TAG (agent/room/wing) → STORE
+        """
         if not self.enabled:
             return False
+
         try:
-            from mempalace.miner import file_drawer
+            from mempalace.miner import add_drawer, get_collection
+            from datetime import datetime
+
+            def chunk_text(text: str, max_chars: int = 800):
+                return [text[i:i + max_chars] for i in range(0, len(text), max_chars)]
+
             timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
-            file_drawer(
-                content=text,
-                source=f"voice_memory_{timestamp}",
-                wing=self.wing,
-                room=room,
-                palace_path=self.palace_path
-            )
-            print(f"[Memory] Stored: {text[:50]}")
+            collection = get_collection(self.palace_path)
+
+            chunks = chunk_text(text)
+
+            # eventually want to add:
+            # "atlas" → main AI
+            # "system" → background processes (auto-summaries, indexing)
+            # "user" → user-imported memories
+            # "tool" → external integrations
+
+            for i, chunk in enumerate(chunks):
+                add_drawer(
+                    collection=collection,
+                    content=chunk,
+                    source_file=f"memory_{timestamp}",
+                    wing=self.wing,
+                    room=room,
+                    agent="atlas",
+                    chunk_index=i
+                )
+
             return True
+
         except Exception as e:
             print(f"[Memory] Store error: {e}")
             return False
 
     def remember_conversation(self, command: str, response: str) -> bool:
-        """Auto-store command/response pairs."""
         if not self.enabled:
             return False
+
         try:
-            from mempalace.miner import file_drawer
+            from mempalace.miner import add_drawer, get_collection
+            from datetime import datetime
+
+            def chunk_text(text: str, max_chars: int = 800):
+                return [text[i:i + max_chars] for i in range(0, len(text), max_chars)]
+
             timestamp = datetime.now().strftime("%Y-%m-%d %H:%M")
             content = f"[{timestamp}]\nUser: {command}\nAtlas: {response}"
-            file_drawer(
-                content=content,
-                source=f"conversation_{datetime.now().strftime('%Y%m%d_%H%M%S')}",
-                wing=self.wing,
-                room="conversations",
-                palace_path=self.palace_path
-            )
+
+            collection = get_collection(self.palace_path)
+            chunks = chunk_text(content)
+
+            for i, chunk in enumerate(chunks):
+                add_drawer(
+                    collection=collection,
+                    content=chunk,
+                    source_file=f"conversation_{datetime.now().strftime('%Y%m%d_%H%M%S')}",
+                    wing=self.wing,
+                    room="conversations",
+                    agent="atlas",
+                    chunk_index=i
+                )
+
             return True
+
         except Exception as e:
             print(f"[Memory] Conversation store error: {e}")
             return False

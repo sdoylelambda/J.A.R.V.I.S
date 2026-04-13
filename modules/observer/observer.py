@@ -57,6 +57,14 @@ class Observer:
             use_gpu=config["system"].get("use_gpu", False),
         )
 
+        from modules.memory import AtlasMemory
+        self.memory = AtlasMemory(config)
+
+        if self.memory.enabled:
+            ctx = self.memory.get_wake_up_context()
+            if ctx:
+                print(f"[Memory] Context loaded: {ctx[:100]}")
+
     async def listen_and_respond(self):
         self.face.set_state("thinking")
         # init ears AND calibrate before greeting
@@ -111,9 +119,9 @@ class Observer:
                         "never mind", "forget it", "escape", "deselect",
                         "first", "second", "third", "forth", "fifth", "break"
                         # browser navigation
-                                                                      "zoom in", "zoom out", "zoom reset", "go down", "go up", "go back", "go forward",
+                        "zoom in", "zoom out", "zoom reset", "go down", "go up", "go back", "go forward",
                         "new tab", "close tab", "refresh", "reload", "new window"
-                                                                     "full screen", "fullscreen", "find", "search on page",
+                        "full screen", "fullscreen", "find", "search on page",
                         "scroll up", "scroll down", "next", "enter", "press enter",
                         "copy", "paste", "select", "click", "escape",
                         # app shortcuts
@@ -123,7 +131,9 @@ class Observer:
                         "sure", "go", "ahead", "affirmative", "correct",
                         "build", "sounds", "good"
                         # calendar commands
-                                           "today's events", "next event", "what's next", "this week", "upcoming events"
+                        "today's events", "next event", "what's next", "this week", "upcoming events"
+                        # brain commands
+                        "remember that", "remember this", "make a note", "don't forget", "keep in mind", "recall"
                     ]
                     if len(words) <= 1 and not any(cmd in text for cmd in known_short):
                         print(f"[STT] Too short, skipping: {text}")
@@ -177,11 +187,35 @@ class Observer:
                 if self.paused:
                     continue
 
+                # 🧠 Memory commands
                 if any(phrase in text for phrase in [
-                    "what can you do", "what are you capable of",
-                    "help", "capabilities", "what do you know"
+                    "remember that", "remember this", "make a note",
+                    "don't forget", "keep in mind"
                 ]):
-                    await self.say(self._build_capabilities(), next_state="listening")
+                    memory_text = text
+                    for phrase in ["remember that", "remember this", "make a note",
+                                   "don't forget", "keep in mind"]:
+                        memory_text = memory_text.replace(phrase, "").strip()
+                    if self.memory.remember(memory_text):
+                        await self.say("Got it, sir. I'll remember that.", next_state="listening")
+                    else:
+                        await self.say("Memory is not enabled, sir.", next_state="listening")
+                    continue
+
+                if any(phrase in text for phrase in [
+                    "what do you remember", "what do you know about",
+                    "do you remember", "recall"
+                ]):
+                    query = text
+                    for phrase in ["what do you remember about", "what do you know about",
+                                   "do you remember", "recall"]:
+                        query = query.replace(phrase, "").strip()
+                    result = self.memory.recall(query)
+                    if result:
+                        speech = self.memory.format_for_speech(result)
+                        await self.say(speech, next_state="listening")
+                    else:
+                        await self.say("I don't have anything on that, sir.", next_state="listening")
                     continue
 
                 # 📅 Calendar commands
@@ -219,6 +253,14 @@ class Observer:
                     print(f"[Launcher Error]: {e}")
                     handled = False
 
+                # Atlas's abilities
+                if any(phrase in text for phrase in [
+                    "what can you do", "what are you capable of",
+                    "help", "capabilities", "what do you know"
+                ]):
+                    await self.say(self._build_capabilities(), next_state="listening")
+                    continue
+
                 # 🔊 TTS response
                 with timer("Total command", self.debug):
                     if handled:
@@ -246,11 +288,22 @@ class Observer:
         cancel_task = asyncio.create_task(self._listen_for_cancel())
         notice_task = asyncio.create_task(self._thinking_notice())
 
+        # inject relevant memories into command context
+        if self.memory and self.memory.enabled:
+            context = self.memory.recall(command, n=2)
+            if context:
+                command_with_context = f"Relevant context:\n{context}\n\nCommand: {command}"
+                print(f"[Memory] Injecting context for: {command[:50]}")
+            else:
+                command_with_context = command
+        else:
+            command_with_context = command
+
         try:
             try:
                 self.face.set_state("thinking")
                 self.face.set_caption("classifying...")  # ← add
-                plan = await asyncio.to_thread(self.brain.process, command)
+                plan = await asyncio.to_thread(self.brain.process, command_with_context)
                 notice_task.cancel()
 
                 # validate route field
@@ -269,11 +322,11 @@ class Observer:
                     await self.say("Cancelled, sir.", next_state="listening")
                     return
 
-                await self._execute_plan_with_confirm(plan, command)
+                await self._execute_plan_with_confirm(plan, command_with_context)
 
             except PermissionRequired as e:
                 notice_task.cancel()
-                await self._handle_permission(e, command)
+                await self._handle_permission(e, command_with_context)
 
             except PlanExecutionError as e:
                 notice_task.cancel()
@@ -281,13 +334,13 @@ class Observer:
 
             except ModelUnavailable as e:
                 notice_task.cancel()
-                await self._handle_model_unavailable(e, command)
+                await self._handle_model_unavailable(e, command_with_context)
 
             except Exception as e:
                 notice_task.cancel()
                 print(f"[Brain Error]: {e}")
                 self.face.set_state("error")
-                if len(command.split()) > 3:
+                if len(command_with_context.split()) > 3:
                     await self.say("I ran into a problem with that one, sir.")
 
         finally:
