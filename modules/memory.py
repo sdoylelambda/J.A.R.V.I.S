@@ -1,6 +1,7 @@
 import os
 import asyncio
 from datetime import datetime
+import numpy as np
 
 
 class AtlasMemory:
@@ -22,6 +23,7 @@ class AtlasMemory:
 
         if self.enabled:
             self._init_mempalace()
+            # self._init_embedder()  -> causing CUDA crash
 
     def _init_mempalace(self):
         """Initialize MemPalace searcher."""
@@ -36,38 +38,171 @@ class AtlasMemory:
             print(f"[Memory] Init error: {e}")
             self.enabled = False
 
+    def _init_embedder(self):
+        try:
+            from sentence_transformers import SentenceTransformer
+            self._embedder = SentenceTransformer(
+                "all-MiniLM-L6-v2",
+                device="cpu"  # 🔥 FORCE CPU --- add to config.yaml
+            )
+            print("[Memory] Embedder loaded (CPU mode)")
+        except Exception as e:
+            print(f"[Memory] Embedder unavailable: {e}")
+            self._embedder = None
+
+    # ── Chunking ────────────────────────────────────────────────
+    def chunk_text(self, text: str, max_chars: int = 800):
+        return [text[i:i + max_chars] for i in range(0, len(text), max_chars)]
+
+    # ── Embedding (safe fallback) ───────────────────────────────
+    try:
+        def embed(self, text: str):
+            from sentence_transformers import SentenceTransformer
+            _embedder = SentenceTransformer("all-MiniLM-L6-v2")
+            return _embedder.encode(text).tolist()
+    except Exception:
+        def embed(text: str):
+            return None  # fallback if model not available
+
+    # ── Cosine similarity ───────────────────────────────────────
+    def cosine_sim(self, a, b):
+        if not a or not b:
+            return 0.0
+        a = np.array(a)
+        b = np.array(b)
+        return float(np.dot(a, b) / (np.linalg.norm(a) * np.linalg.norm(b)))
+
+    # ── Normalize memory  ────────────────────────────────────────────────
+    def normalize_memory(self, mem):
+        if isinstance(mem, dict):
+            return {
+                "content": mem.get("content") or mem.get("text"),
+                "embedding": mem.get("embedding"),
+                "agent": mem.get("agent"),
+                "room": mem.get("room"),
+                "wing": mem.get("wing"),
+                "timestamp": mem.get("timestamp"),
+                "access_count": mem.get("access_count", 0),
+                "importance": mem.get("importance", 1.0),
+            }
+
+        if isinstance(mem, str):
+            return {
+                "content": mem,
+                "embedding": None,
+                "agent": None,
+                "room": None,
+                "wing": None,
+                "timestamp": None,
+                "access_count": 0,
+                "importance": 1.0,
+            }
+
+        return None
+
     # ── Search ────────────────────────────────────────────────────────────
 
-    def recall(self, query: str, n: int = 3) -> str | None:
-        """Search memory for relevant context."""
-        if not self.enabled:
-            return None
+    def update_access(self, mem):
+        mem["access_count"] = mem.get("access_count", 0) + 1
+
+    def recall(self, query: str, n: int = 3):
         try:
+            if not self._search_fn:
+                return []
+
+            print(f"[Memory] Searching for: {query}")
+
             results = self._search_fn(
-                query,
-                palace_path=self.palace_path,
-                wing=self.wing,
-                n_results=n
+                query=query,
+                palace_path=self.palace_path
             )
-            if not results:
-                return None
 
-            # format results for injection into Brain context
-            parts = []
-            for r in results:
-                content = r.get('content', '').strip()
-                source = r.get('metadata', {}).get('source', '')
-                if content:
-                    parts.append(f"[{source}]: {content[:300]}")
+            raw = results.get("results", [])
 
-            result = "\n".join(parts)
-            if self.debug:
-                print(f"[Memory] Recalled {len(results)} results for: {query[:50]}")
-            return result if result else None
+            # ── optional wing filter (manual) ─────────────
+            raw = [
+                r for r in raw
+                if r.get("wing") in (self.wing, None)
+            ]
+
+            cleaned = []
+
+            for m in raw[:n * 2]:  # oversample then trim
+                text = m.get("text") or m.get("content")
+                if not text:
+                    continue
+
+                text = text.strip()
+
+                # hard filter out junk/code dumps
+                if len(text) > 300:
+                    continue
+
+                cleaned.append(text[:200])
+
+            print(f"[Memory] Returning {len(cleaned)} memories")
+
+            return "\n".join(cleaned)
 
         except Exception as e:
             print(f"[Memory] Recall error: {e}")
-            return None
+            return []
+
+        # Advanced version to consider implementing later
+        # try:
+        #     from mempalace.miner import get_collection
+        #
+        #     collection = get_collection(self.palace_path)
+        #     query_vec = self.embed(query)
+        #
+        #     results = []
+        #
+        #     for raw_mem in collection.get_all():
+        #
+        #         mem = self.normalize_memory(raw_mem)
+        #         if not mem:
+        #             continue
+        #
+        #         content = mem.get("content")
+        #         if not content:
+        #             continue
+        #
+        #         mem_vec = mem.get("embedding")
+        #
+        #         # ── Semantic similarity ─────────────────────
+        #         score = self.cosine_sim(query_vec, mem_vec)
+        #
+        #         # ── Recency decay ───────────────────────────
+        #         timestamp = mem.get("timestamp")
+        #         if timestamp:
+        #             try:
+        #                 ts = datetime.strptime(timestamp, "%Y%m%d_%H%M%S")
+        #                 age_days = (datetime.now() - ts).days
+        #             except:
+        #                 age_days = 999
+        #         else:
+        #             age_days = 999
+        #
+        #         decay = np.exp(-0.02 * age_days)
+        #
+        #         # ── Importance + access boost ───────────────
+        #         importance = mem.get("importance", 1.0)
+        #         access = mem.get("access_count", 0)
+        #         boost = np.log(access + 1) if access > 0 else 1.0
+        #
+        #         final_score = score * decay * importance * boost
+        #
+        #         results.append((final_score, mem))
+        #
+        #     results.sort(reverse=True, key=lambda x: x[0])
+        #
+        #     top_memories = [m for _, m in results[:n]]
+        #
+        #     return top_memories
+        #
+        # except Exception as e:
+        #     print(f"[Memory] Recall error: {e}")
+        #     return []
 
     # ── Store ─────────────────────────────────────────────────────────────
 
@@ -81,17 +216,13 @@ class AtlasMemory:
 
         try:
             from mempalace.miner import add_drawer, get_collection
-            from datetime import datetime
-
-            def chunk_text(text: str, max_chars: int = 800):
-                return [text[i:i + max_chars] for i in range(0, len(text), max_chars)]
 
             timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
             collection = get_collection(self.palace_path)
 
-            chunks = chunk_text(text)
+            chunks = self.chunk_text(text)
 
-            # eventually want to add:
+            # eventually want to add agents:
             # "atlas" → main AI
             # "system" → background processes (auto-summaries, indexing)
             # "user" → user-imported memories
@@ -108,6 +239,7 @@ class AtlasMemory:
                     chunk_index=i
                 )
 
+            print(f"[Memory] Stored {len(chunks)} chunk(s)")
             return True
 
         except Exception as e:
@@ -120,16 +252,12 @@ class AtlasMemory:
 
         try:
             from mempalace.miner import add_drawer, get_collection
-            from datetime import datetime
 
-            def chunk_text(text: str, max_chars: int = 800):
-                return [text[i:i + max_chars] for i in range(0, len(text), max_chars)]
-
-            timestamp = datetime.now().strftime("%Y-%m-%d %H:%M")
-            content = f"[{timestamp}]\nUser: {command}\nAtlas: {response}"
+            timestamp_str = datetime.now().strftime("%Y-%m-%d %H:%M")
+            content = f"[{timestamp_str}]\nUser: {command}\nAtlas: {response}"
 
             collection = get_collection(self.palace_path)
-            chunks = chunk_text(content)
+            chunks = self.chunk_text(content)
 
             for i, chunk in enumerate(chunks):
                 add_drawer(
@@ -173,6 +301,8 @@ class AtlasMemory:
     def format_for_speech(self, memory_text: str) -> str:
         """Clean memory text for TTS."""
         import re
+        if self.debug:
+            print(f"[Observer]: formatting for speech: {memory_text}")
         text = re.sub(r'\[.*?\]:', '', memory_text)
         text = re.sub(r'\s+', ' ', text)
         return text.strip()[:500]

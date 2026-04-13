@@ -204,11 +204,11 @@ class Observer:
 
                 if any(phrase in text for phrase in [
                     "what do you remember", "what do you know about",
-                    "do you remember", "recall"
+                    "do you remember", "recall", "do i prefer"
                 ]):
                     query = text
                     for phrase in ["what do you remember about", "what do you know about",
-                                   "do you remember", "recall"]:
+                                   "do you remember", "recall", "do i prefer"]:
                         query = query.replace(phrase, "").strip()
                     result = self.memory.recall(query)
                     if result:
