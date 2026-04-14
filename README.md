@@ -98,6 +98,7 @@ Atlas is built around a layered intelligence architecture:
 5. **Cloud APIs** — Claude and Gemini available for long-context reasoning and real-time information (opt-in, permission required)
 6. **LLaVA** — local vision model, analyzes webcam frames for object identification, 
    scene description, and text reading
+7. **MemPalace** - controlled memory recall and formatting pipeline
 
 All core functionality runs **completely locally** on your machine. No data leaves your computer unless you explicitly approve it.
 
@@ -150,6 +151,7 @@ All core functionality runs **completely locally** on your machine. No data leav
 - [x] Gmail integration and control
 - [x] Summarize screenshot
 - [x] Summarize PDF
+- [x] Persistent memory and user preferences - https://www.mempalace.tech/ https://github.com/milla-jovovich/mempalace
 
 ### Planned
 - [ ] Add way user wants to be addressed to config.yaml (sir, ma'am, John, Jane, etc.)
@@ -159,7 +161,6 @@ All core functionality runs **completely locally** on your machine. No data leav
 - [ ] FastAPI server — REST/WebSocket interface for mobile clients
 - [ ] Flutter app - Mobile use for Android and iOS - native phone mic, speakers, camera
   - [ ] Phone camera integration via IP Webcam app
-- [ ] Persistent memory and user preferences - https://www.mempalace.tech/ https://github.com/milla-jovovich/mempalace
 - [ ] Push-to-talk mode
 - [ ] Slack alerts
 - [ ] Text alerts
@@ -350,6 +351,18 @@ Atlas will calibrate the microphone noise floor, open the GUI, then say **"Hello
 ---
 
 ## Voice/Text Commands
+
+### Memory
+| Say                                                  | Result |
+|------------------------------------------------------|--------|
+| `remember that I prefer async python over threading` | Stores preference in long-term memory |
+| `remember this: my project uses Node and React`      | Saves custom fact for future recall |
+| `what do you remember about me`                      | Retrieves stored preferences and facts |
+| `do I prefer async python or threading`              | Recalls relevant memory and answers accordingly |
+| `save this conversation`                             | Stores current interaction in memory |
+| `what have we talked about`                          | Retrieves recent or relevant past conversations |
+| `clear memory`                                       | Clears stored memory (if enabled/allowed) |
+| `forget that I like X`                               | Removes a specific stored memory |
 
 ### Wake / Sleep
 | Say | Result |
@@ -853,29 +866,30 @@ gui:
 
 ```
 Your voice
-    ↓
+↓
 Whisper STT — transcribes audio to text
-    ↓
+↓
 Hallucination filter — drops repetitive/too-short/echo audio
-    ↓
+↓
 Fast keyword layer (AppLauncher)
-    ├── matched → execute instantly (open app, wake, pause, cancel)
-    └── no match ↓
+├── matched → execute instantly (open app, wake, pause, cancel)
+└── no match ↓
 Command Queue — voice keeps listening while Brain processes
-    ↓
+↓
+Memory Recall Pipeline (MemPalace)
+├── Semantic recall (similarity search on query)
+├── Returns relevant past memories (if any)
+└── Injects context into Brain
+↓
 phi3:mini classifier
-    ├── simple fact/conversation → answer directly (~2-4 seconds)
-    └── ESCALATE ↓
+├── simple fact/conversation → answer directly (~2-4 seconds)
+└── ESCALATE ↓
 Mistral orchestrator
-    ├── generates JSON execution plan (dynamic ctx: 1024–8192)
-    ├── speaks summary → "Shall I proceed, sir?"
-    ├── waits for voice confirmation
-    └── confirmed ↓
+├── generates JSON execution plan (dynamic ctx: 1024–8192)
+├── speaks summary → "Shall I proceed, sir?"
+├── waits for voice confirmation
+└── confirmed ↓
 ToolExecutor
-    ├── create_file, create_dir
-    ├── generate_code → DeepSeek Coder writes actual code
-    ├── read_file, run_script, list_dir, delete_file
-    └── web_search, browser_navigate, browser_search
 ```
 
 ---
@@ -985,6 +999,13 @@ For any command that involves executing steps, Atlas will:
   ollama run phi3:mini "say hello"
   ollama run deepseek-coder:6.7b "say hello"
   ```
+  
+### Persistent memory 
+```bash
+pip install mempalace
+mempalace init .
+```
+
 
 ### Python Environment
 - [ ] Create and activate virtual environment
@@ -1148,10 +1169,9 @@ integrations:
 
 # ---- Memory ----
 memory:
-  enabled: false # enable later when adding FAISS
-  vector_db_path: "./memory/vector_db/"
-  short_term_db: "./memory/short_term.db"
-  recall_top_k: 5
+  enabled: true
+  wing: "atlas"
+  palace_path: "~/.mempalace/palace"
 
 # ---- Audio ----
 audio:

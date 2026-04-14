@@ -27,3 +27,289 @@ more tests
 PDF - which file is found? should be the most recent timestamp
 
 config.yaml - mobile: mouth, face, and ears disabled
+
+
+
+
+Below is a drop-in Feature Builder module designed to plug directly into Atlas.
+
+It gives you:
+
+🧠 Natural language → feature specification
+🧱 Structured feature generation (files + architecture)
+🔐 Safety confirmation gate
+🔌 ToolExecutor-compatible file writing
+📦 Modular plugin output (modules/features/...)
+🧭 Observer integration hook
+🔥 feature_builder.py (DROP-IN MODULE)
+import os
+import json
+from datetime import datetime
+
+
+class FeatureBuilder:
+    """
+    Atlas Feature Builder
+    Converts natural language requests into modular Atlas features.
+    """
+
+    def __init__(self, brain, tool_executor, observer, config=None):
+        self.brain = brain
+        self.tools = tool_executor
+        self.observer = observer
+        self.config = config or {}
+        self.feature_root = "modules/features"
+        self.pending_feature = None
+
+    # ─────────────────────────────────────────────
+    # ENTRY POINT
+    # ─────────────────────────────────────────────
+    async def handle_request(self, text: str):
+        """
+        Main entry point for feature creation requests.
+        """
+
+        feature_name = self._extract_feature_name(text)
+
+        print(f"[FeatureBuilder] Requested: {feature_name}")
+
+        plan = await self._generate_feature_plan(text, feature_name)
+
+        self.pending_feature = plan
+
+        return self._ask_confirmation(plan)
+
+    # ─────────────────────────────────────────────
+    # STEP 1 — FEATURE NAME EXTRACTION
+    # ─────────────────────────────────────────────
+    def _extract_feature_name(self, text: str) -> str:
+        """
+        Extract feature name from command.
+        """
+        try:
+            lower = text.lower()
+            if "called" in lower:
+                return lower.split("called")[1].split("that allows")[0].strip().replace(" ", "_")
+            return "custom_feature_" + datetime.now().strftime("%H%M%S")
+        except:
+            return "custom_feature"
+
+    # ─────────────────────────────────────────────
+    # STEP 2 — MISTRAL FEATURE DESIGN
+    # ─────────────────────────────────────────────
+    async def _generate_feature_plan(self, text: str, feature_name: str):
+        """
+        Ask Mistral to design full feature architecture.
+        """
+
+        prompt = f"""
+You are Atlas Feature Builder.
+
+Design a fully working modular feature for A.T.L.A.S.
+
+User request:
+{text}
+
+Feature name:
+{feature_name}
+
+Return STRICT JSON ONLY:
+
+{{
+  "feature_name": "{feature_name}",
+  "summary": "...",
+  "files": [
+    {{
+      "path": "modules/features/{feature_name}/controller.py",
+      "content": "..."
+    }},
+    {{
+      "path": "modules/features/{feature_name}/handler.py",
+      "content": "..."
+    }}
+  ],
+  "register_code": "...python register(observer, brain, tools) function...",
+  "dependencies": []
+}}
+
+Rules:
+- Must integrate with Atlas observer system
+- Must be safe and modular
+- Must NOT modify unrelated files
+- Must include a register() function
+"""
+
+        response = await self.brain.generate(
+            prompt=prompt,
+            model="mistral",
+            temperature=0.2,
+            max_tokens=2000
+        )
+
+        try:
+            return json.loads(response)
+        except Exception as e:
+            print("[FeatureBuilder] JSON parse failed:", e)
+            return None
+
+    # ─────────────────────────────────────────────
+    # STEP 3 — CONFIRMATION GATE
+    # ─────────────────────────────────────────────
+    def _ask_confirmation(self, plan: dict):
+        if not plan:
+            return "Failed to generate feature plan."
+
+        summary = plan.get("summary", "No summary available")
+
+        return f"""
+[Atlas Feature Builder]
+
+I will create a new feature: {plan['feature_name']}
+
+Summary:
+{summary}
+
+This will create {len(plan.get('files', []))} file(s).
+
+Shall I proceed, sir?
+"""
+
+    # ─────────────────────────────────────────────
+    # STEP 4 — EXECUTION (FILE CREATION)
+    # ─────────────────────────────────────────────
+    async def execute(self, approved: bool):
+        """
+        Execute feature creation after confirmation.
+        """
+
+        if not approved:
+            self.pending_feature = None
+            return "Feature creation cancelled."
+
+        plan = self.pending_feature
+        if not plan:
+            return "No pending feature."
+
+        feature_name = plan["feature_name"]
+        base_path = os.path.join(self.feature_root, feature_name)
+
+        os.makedirs(base_path, exist_ok=True)
+
+        created_files = []
+
+        # ── Create files ─────────────────────────────
+        for file in plan.get("files", []):
+            path = file["path"]
+            content = file["content"]
+
+            try:
+                self.tools.create_file(path, content)
+                created_files.append(path)
+                print(f"[FeatureBuilder] Created: {path}")
+
+            except Exception as e:
+                print(f"[FeatureBuilder] Failed file {path}: {e}")
+
+        # ── Write register hook ──────────────────────
+        register_path = os.path.join(base_path, "register.py")
+
+        register_code = plan.get("register_code", "")
+
+        if register_code:
+            self.tools.create_file(register_path, register_code)
+            created_files.append(register_path)
+
+        self.pending_feature = None
+
+        return f"""
+[Atlas Feature Builder]
+
+Feature '{feature_name}' created successfully.
+
+Files created:
+{chr(10).join(created_files)}
+
+Run 'enable feature {feature_name}' to activate it.
+"""
+
+    # ─────────────────────────────────────────────
+    # STEP 5 — OBSERVER HOOK
+    # ─────────────────────────────────────────────
+    def attach(self):
+        """
+        Attach handler into observer routing system.
+        """
+
+        def handler(text):
+            if text.lower().startswith("add a new feature"):
+                return self.handle_request(text)
+            return None
+
+        self.observer.register_handler("feature_builder", handler)
+🔌 HOW TO INTEGRATE IT
+1. Initialize in main system
+feature_builder = FeatureBuilder(
+    brain=brain,
+    tool_executor=tool_executor,
+    observer=observer
+)
+
+feature_builder.attach()
+2. Add routing rule in Observer
+if text.startswith("add a new feature"):
+    return "feature_builder"
+3. Hook confirmation response
+
+In your observer “yes/no” handler:
+
+if feature_builder.pending_feature:
+    if text in ["yes", "yeah", "do it", "go ahead"]:
+        return await feature_builder.execute(True)
+⚡ WHAT THIS GIVES YOU
+
+You now have:
+
+🧠 AI Feature Autogenerator
+
+Atlas can design modules it didn’t previously have.
+
+🧱 Structured plugin system
+
+Every feature becomes:
+
+modules/features/{name}/
+🔐 Safe execution gate
+
+Nothing runs without confirmation.
+
+🔌 Clean integration layer
+
+No random workspace dumping anymore.
+
+🚀 NEXT LEVEL (optional upgrades I can build for you)
+
+If you want to push this further, I can add:
+
+1. 🔄 Feature hot-reload system
+
+No restart needed when new features are created
+
+2. 🧠 Feature self-improvement loop
+
+Atlas can update its own features over time
+
+3. 🧩 Feature dependency resolver
+
+“light controller depends on mqtt module”
+
+4. 🛍️ Feature marketplace
+
+Install features like plugins:
+
+install feature weather radar
+5. 🧪 Sandbox mode
+
+Test generated feature before activation
+
+If you want next step, I recommend:
+👉 “make Atlas automatically register and activate new features immediately after creation”
