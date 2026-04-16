@@ -65,6 +65,18 @@ class Observer:
             if ctx:
                 print(f"[Memory] Context loaded: {ctx[:100]}")
 
+        from modules.feature_builder import FeatureBuilder
+
+        self.handlers = {}
+        self.feature_builder = FeatureBuilder(
+            brain=self.brain,
+            tool_executor=self.executor,
+            observer=self,
+            config=config
+        )
+
+        self.feature_builder.attach()
+
     async def listen_and_respond(self):
         self.face.set_state("thinking")
         # init ears AND calibrate before greeting
@@ -233,17 +245,43 @@ class Observer:
                     ):
                         continue
 
-                # 👁️ Vision commands
-                if self.eyes:
-                    from modules.observer.eyes_handler import handle_vision_command
-                    if await handle_vision_command(text, self.face, self.mouth, self.eyes, self.debug):
-                        continue
+                # 🧩 Feature Builder
+                if text.lower().startswith("add a new feature"):
+                    self.face.set_state("thinking")
+                    response = await self.feature_builder.handle_request(text)
+                    await self.say(response)
 
-                # 📄 Document commands
-                from modules.observer.document_handler import handle_document_command
-                if await handle_document_command(text, self.face, self.mouth, self.brain, self.ears, self.stt, self.say,
-                                                 self.debug):
+                    # wait for confirmation (reuse your existing flow)
+                    await self.say("Say yes to confirm or anything else to cancel, sir.")
+
+                    try:
+                        confirm = self._text_command_queue.get_nowait()
+                    except:
+                        audio_bytes, duration = await self.ears.listen()
+                        confirm = self.stt.transcribe(audio_bytes, duration).lower().strip() if audio_bytes else ""
+
+                    if confirm in ["yes", "yeah", "do it", "go ahead"]:
+                        result = await self.feature_builder.execute(True)
+                    else:
+                        result = await self.feature_builder.execute(False)
+
+                    await self.say(result)
                     continue
+
+                # 🧩 Dynamic handlers (Feature Builder)
+                for name, handler in self.handlers.items():
+                    try:
+                        result = handler(text)
+
+                        if asyncio.iscoroutine(result):
+                            result = await result
+
+                        if result:
+                            await self.say(result)
+                            continue
+
+                    except Exception as e:
+                        print(f"[Observer] Handler error ({name}): {e}")
 
                 # 🚀 Command handling
                 self.face.set_state("thinking")
@@ -656,3 +694,8 @@ class Observer:
 
         core += "What would you like me to do, sir?"
         return core
+
+    # Adding new features
+    def register_handler(self, name: str, handler):
+        print(f"[Observer] Registered handler: {name}")
+        self.handlers[name] = handler
