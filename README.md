@@ -151,15 +151,15 @@ All core functionality runs **completely locally** on your machine. No data leav
 - [x] Gmail integration and control
 - [x] Summarize screenshot
 - [x] Summarize PDF
-- [x] Persistent memory and user preferences - https://www.mempalace.tech/ https://github.com/milla-jovovich/mempalace
+- [x] Persistent memory and user preferences
 
 ### Planned
 - [ ] Add way user wants to be addressed to config.yaml (sir, ma'am, John, Jane, etc.)
 - [ ] Self-expanding fast keyword layer
 - [ ] RAG over local notes and files
 - [ ] Research topic 
-- [ ] FastAPI server — REST/WebSocket interface for mobile clients
-- [ ] Flutter app - Mobile use for Android and iOS - native phone mic, speakers, camera
+- [ ] REST interface for mobile clients
+- [ ] App - Mobile use for Android and iOS - native phone mic, speakers, camera
   - [ ] Phone camera integration via IP Webcam app
 - [ ] Push-to-talk mode
 - [ ] Slack alerts
@@ -173,7 +173,11 @@ All core functionality runs **completely locally** on your machine. No data leav
   - [ ] "analyze this diagram"
   - [ ] "what's wrong with this code" ← hold code up to camera
   - [ ] "summarize this document"
-  - [ ] Use mobile phone's camera     
+  - [ ] Use mobile phone's camera 
+- [ ] Learn new feature - Simply speak feature to add and code is implemented 
+- [ ] Auto calendar alerts
+- [ ] Auto check email - notify - respond
+- [ ] Additional voice controlled app integrations
 
 ---
 
