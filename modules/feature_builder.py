@@ -124,6 +124,7 @@ class FeatureBuilder:
 
         return self._safe_json_extract(response)
 
+
 #     def _generate_feature_plan(self, text: str, feature_name: str):
 #         """
 #         Ask Mistral to design full feature architecture.
