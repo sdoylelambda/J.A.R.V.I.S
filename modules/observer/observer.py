@@ -492,6 +492,9 @@ class Observer:
         if results:
             await self.say(results[-1], next_state="listening")
 
+        if self.memory.enabled:
+            self.memory.remember_conversation(command, results[-1])
+
     async def _handle_permission(self, e: PermissionRequired, command: str):
         """Handle API permission requests."""
         await self.say(

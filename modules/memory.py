@@ -1,7 +1,5 @@
 import os
-import asyncio
 from datetime import datetime
-import numpy as np
 
 
 class AtlasMemory:
@@ -11,15 +9,13 @@ class AtlasMemory:
     """
 
     def __init__(self, config: dict):
+        self.debug = True
         self.config = config.get("memory", {})
         self.enabled = self.config.get("enabled", False)
         self.wing = self.config.get("wing", "atlas")
         self.palace_path = os.path.expanduser(
             self.config.get("palace_path", "~/.mempalace/palace")
         )
-        self.debug = True
-        self._searcher = None
-        self._miner = None
 
         if self.enabled:
             self._init_mempalace()
@@ -55,17 +51,17 @@ class AtlasMemory:
         return [text[i:i + max_chars] for i in range(0, len(text), max_chars)]
 
     # ── Embedding (safe fallback) ───────────────────────────────
-    try:
-        def embed(self, text: str):
+    def embed(self, text: str):
+        try:
             from sentence_transformers import SentenceTransformer
-            _embedder = SentenceTransformer("all-MiniLM-L6-v2")
-            return _embedder.encode(text).tolist()
-    except Exception:
-        def embed(text: str):
+            embedder = SentenceTransformer("all-MiniLM-L6-v2", device="cpu")
+            return embedder.encode(text).tolist()
+        except Exception:
             return None  # fallback if model not available
 
     # ── Cosine similarity ───────────────────────────────────────
     def cosine_sim(self, a, b):
+        import numpy as np
         if not a or not b:
             return 0.0
         a = np.array(a)
@@ -144,9 +140,10 @@ class AtlasMemory:
 
             return "\n".join(cleaned)
 
+
         except Exception as e:
             print(f"[Memory] Recall error: {e}")
-            return []
+            return ""
 
         # Advanced version to consider implementing later
         # try:
