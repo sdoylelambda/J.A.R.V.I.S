@@ -2,12 +2,14 @@ import asyncio
 import datetime
 
 
-async def handle_calendar_command(text: str, calendar, say, ears, stt) -> bool:
+async def handle_calendar_command(text: str, calendar, say, ears, stt, config) -> bool:
     """
     Handle calendar commands. Returns True if handled, False if not a calendar command.
     """
     if not calendar:
         return False
+
+    response_name = config["personalize"].get("response_name", "")
 
     # ── Read intent ──────────────────────────────────────────────────────
     read_phrases = [
@@ -39,7 +41,7 @@ async def handle_calendar_command(text: str, calendar, say, ears, stt) -> bool:
 
         if any(w in text for w in ["next meeting", "next event", "what's next", "next appointment"]):
             event = await asyncio.to_thread(calendar.get_next_event)
-            response = calendar.format_events_for_speech([event]) if event else "Nothing coming up, sir."
+            response = calendar.format_events_for_speech([event]) if event else f"Nothing coming up, {response_name}."
             await say(response, next_state="listening")
             return True
 
@@ -57,7 +59,7 @@ async def handle_calendar_command(text: str, calendar, say, ears, stt) -> bool:
 
     if any(phrase in text for phrase in create_triggers) and \
        any(w in text for w in day_words):
-        await _handle_create(text, calendar, say, ears, stt)
+        await _handle_create(text, calendar, say, ears, stt, config)
         return True
 
     return False
@@ -76,8 +78,9 @@ async def _handle_read(text: str, calendar, say) -> None:
         await say(calendar.format_events_for_speech(events), next_state="listening")
 
 
-async def _handle_create(text: str, calendar, say, ears, stt) -> None:
+async def _handle_create(text: str, calendar, say, ears, stt, config) -> None:
     """Handle event creation — parse directly or guided flow."""
+    response_name = config["personalize"].get("response_name", "")
     parsed = calendar.parse_event_from_text(text)
 
     if parsed and parsed.get("time"):
@@ -90,12 +93,12 @@ async def _handle_create(text: str, calendar, say, ears, stt) -> None:
             parsed.get("duration", 60)
         )
         day_str = "today" if parsed["date"] == datetime.date.today().isoformat() else parsed["date"]
-        await say(f"Done, sir. {parsed['title']} added on {day_str} at {parsed.get('time')}.",
+        await say(f"Done, {response_name}. {parsed['title']} added on {day_str} at {parsed.get('time')}.",
                   next_state="listening")
 
     elif parsed and not parsed.get("time"):
         # have title and date but no time
-        await say("What time, sir?")
+        await say(f"What time, {response_name}?")
         audio_bytes, dur = await ears.listen()
         time_text = stt.transcribe(audio_bytes, dur).lower().strip() if audio_bytes else ""
         parsed = calendar.parse_event_from_text(f"{text} {time_text}")
@@ -107,21 +110,21 @@ async def _handle_create(text: str, calendar, say, ears, stt) -> None:
                 parsed.get("time"),
                 parsed.get("duration", 60)
             )
-            await say(f"Done, sir. {parsed['title']} added.", next_state="listening")
+            await say(f"Done, {response_name}. {parsed['title']} added.", next_state="listening")
         else:
-            await say("Sorry sir, I couldn't parse that. Please try again.", next_state="listening")
+            await say(f"Sorry {response_name}, I couldn't parse that. Please try again.", next_state="listening")
 
     else:
         # guided flow — ask one at a time
-        await say("What's the title of the event, sir?")
+        await say(f"What's the title of the event, {response_name}?")
         audio_bytes, dur = await ears.listen()
         title = stt.transcribe(audio_bytes, dur).lower().strip() if audio_bytes else ""
 
-        await say("What day, sir?")
+        await say(f"What day, {response_name}?")
         audio_bytes, dur = await ears.listen()
         day_text = stt.transcribe(audio_bytes, dur).lower().strip() if audio_bytes else ""
 
-        await say("What time, sir?")
+        await say(f"What time, {response_name}?")
         audio_bytes, dur = await ears.listen()
         time_text = stt.transcribe(audio_bytes, dur).lower().strip() if audio_bytes else ""
 
@@ -134,6 +137,6 @@ async def _handle_create(text: str, calendar, say, ears, stt) -> None:
                 parsed.get("time"),
                 parsed.get("duration", 60)
             )
-            await say(f"Done, sir. {parsed['title']} added.", next_state="listening")
+            await say(f"Done, {response_name}. {parsed['title']} added.", next_state="listening")
         else:
-            await say("Sorry sir, I wasn't able to create that event.", next_state="listening")
+            await say(f"Sorry {response_name}, I wasn't able to create that event.", next_state="listening")

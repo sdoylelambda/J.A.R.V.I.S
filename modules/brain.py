@@ -14,6 +14,7 @@ from config.api_keys import get_api_key
 class Brain:
     def __init__(self, config: dict):
         self.config = config["llm"]
+        self.response_name = config["personalize"].get("response_name", "")
         self.models = self.config["models"]
         self.api_models = self.config["api_models"]
         self._gemini_client = None
@@ -113,9 +114,9 @@ class Brain:
         phi3 attempts to handle the command directly.
         Returns a result dict if it can handle it, None if it needs Mistral.
         """
-        system = textwrap.dedent("""
+        system = textwrap.dedent(f"""
             You are Atlas, a witty British AI assistant.
-            Always say 'sir'. 
+            Always say {self.response_name}. 
             Keep responses as short as possible.
 
             ESCALATE for anything code or creation related: files, languages, apps, web, scripts, system.
@@ -129,15 +130,15 @@ class Brain:
             User: open browser
             Atlas: ESCALATE
             User: what is the capital of France
-            Atlas: Paris, sir.
+            Atlas: Paris, {self.response_name}.
             User: what's the address for daytona international speedway
             Atlas: the address for daytona international speedway 1801 W International Speedway Blvd, Daytona Beach, FL 32114
             User: tell me a joke
-            Atlas: Why don't eggs tell jokes? They'd crack each other up, sir.
+            Atlas: Why don't eggs tell jokes? They'd crack each other up, {self.response_name}.
             User: how are you
-            Atlas: Fully operational, sir.
+            Atlas: Fully operational, {self.response_name}.
             User: what is 2 plus 2
-            Atlas: 4, sir.""").strip()
+            Atlas: 4, {self.response_name}.""").strip()
 
         result = self.query(command, model_key="classifier", system=system)
         result = result.strip()

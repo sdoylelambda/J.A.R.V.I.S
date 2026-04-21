@@ -26,6 +26,7 @@ async def run_text_only(config):
     class MockFace:
         def __init__(self):
             self._current_state = None
+
         def set_state(self, s):
             if s == self._current_state:
                 return
@@ -45,7 +46,8 @@ async def run_text_only(config):
 
     set_key_request_callback(observer._request_key_via_gui)
 
-    async def text_input_loop():
+    async def text_input_loop(config):
+        response_name = config["personalize"].get("response_name", "")
         session = PromptSession()
         print("\n[Atlas] Text input ready — type commands below")
         print("[Atlas] Voice input also active via desktop mic\n")
@@ -57,14 +59,14 @@ async def run_text_only(config):
                 if not text:
                     continue
                 if text.lower() in ["exit", "quit", "q"]:
-                    print("[Atlas] Goodbye, sir.")
+                    print(f"[Atlas] Goodbye, {response_name}.")
                     sys.exit(0)
                 # ← route through queue so keyword layer runs
                 await observer._text_command_queue.put(text.lower().strip())
             except EOFError:
                 break
             except KeyboardInterrupt:
-                print("\n[Atlas] Goodbye, sir.")
+                print(f"\n[Atlas] Goodbye, {response_name}.")
                 sys.exit(0)
 
     await asyncio.gather(

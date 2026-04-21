@@ -24,6 +24,7 @@ class Observer:
         self.face = face_controller
         self.window_controller = window_controller
         self.config = config
+        self.response_name = config["personalize"].get("response_name", "")
         self.paused = False
         self.cancelled = False
         self._processing = False
@@ -87,7 +88,7 @@ class Observer:
 
         print("[Observer] Listening and responding...")
         asyncio.create_task(self.ears.auto_calibrate(interval=30))
-        await self.say("Hello sir, what can I do for you.")
+        await self.say(f"Hello {self.response_name}, what can I do for you.")
         self.face.set_state("listening")
 
         while True:
@@ -184,7 +185,7 @@ class Observer:
                         self.paused = False
                         self.face.set_state("thinking")
                         with timer("TTS wake", self.debug):
-                            await self.say("For you sir, always.")
+                            await self.say(f"For you {self.response_name}, always.")
                         self.face.set_state("listening")
                     continue
 
@@ -209,9 +210,9 @@ class Observer:
                                    "don't forget", "keep in mind"]:
                         memory_text = memory_text.replace(phrase, "").strip()
                     if self.memory.remember(memory_text):
-                        await self.say("Got it, sir. I'll remember that.", next_state="listening")
+                        await self.say(f"Got it, {self.response_name}. I'll remember that.", next_state="listening")
                     else:
-                        await self.say("Memory is not enabled, sir.", next_state="listening")
+                        await self.say(f"Memory is not enabled, {self.response_name}.", next_state="listening")
                     continue
 
                 if any(phrase in text for phrase in [
@@ -227,13 +228,13 @@ class Observer:
                         speech = self.memory.format_for_speech(result)
                         await self.say(speech, next_state="listening")
                     else:
-                        await self.say("I don't have anything on that, sir.", next_state="listening")
+                        await self.say(f"I don't have anything on that, {self.response_name}.", next_state="listening")
                     continue
 
                 # 📅 Calendar commands
                 if self.calendar:
                     from modules.observer.calendar_handler import handle_calendar_command
-                    if await handle_calendar_command(text, self.calendar, self.say, self.ears, self.stt):
+                    if await handle_calendar_command(text, self.calendar, self.say, self.ears, self.stt, self.config):
                         continue
 
                 # 📧 Gmail commands
@@ -241,7 +242,7 @@ class Observer:
                     from modules.observer.gmail_handler import handle_gmail_command
                     if await handle_gmail_command(
                             text, self.gmail, self.drafter,
-                            self.calendar, self.say, self.ears, self.stt
+                            self.calendar, self.say, self.ears, self.stt, self.config
                     ):
                         continue
 
@@ -252,7 +253,7 @@ class Observer:
                     await self.say(response)
 
                     # wait for confirmation (reuse your existing flow)
-                    await self.say("Say yes to confirm or anything else to cancel, sir.")
+                    await self.say(f"Say yes to confirm or anything else to cancel, {self.response_name}.")
 
                     try:
                         confirm = self._text_command_queue.get_nowait()
@@ -357,7 +358,7 @@ class Observer:
                     await asyncio.sleep(0)  # flush any pending Qt signal updates
 
                 if self.cancelled:
-                    await self.say("Cancelled, sir.", next_state="listening")
+                    await self.say(f"Cancelled, {self.response_name}.", next_state="listening")
                     return
 
                 await self._execute_plan_with_confirm(plan, command_with_context)
@@ -379,7 +380,7 @@ class Observer:
                 print(f"[Brain Error]: {e}")
                 self.face.set_state("error")
                 if len(command_with_context.split()) > 3:
-                    await self.say("I ran into a problem with that one, sir.")
+                    await self.say(f"I ran into a problem with that one, {self.response_name}.")
 
         finally:
             self._finishing = True
@@ -399,7 +400,7 @@ class Observer:
         """Speak 'one moment' if Brain takes too long."""
         await asyncio.sleep(7.5)
         if not self.cancelled:
-            await self.say("One moment please, sir.")
+            await self.say(f"One moment please, {self.response_name}.")
 
     async def _listen_for_cancel(self):
         """Always-on cancel listener running during brain execution."""
@@ -436,7 +437,7 @@ class Observer:
             return
 
         await self.say(summary)
-        await self.say("Shall I proceed, sir?")
+        await self.say(f"Shall I proceed, {self.response_name}?")
 
         self.face.set_caption("waiting for confirmation...")
 
@@ -460,14 +461,14 @@ class Observer:
 
         if not confirmed:
             self.face.set_caption("")
-            await self.say("Understood, sir. Cancelled.", next_state="listening")
+            await self.say(f"Understood, {self.response_name}. Cancelled.", next_state="listening")
             return
 
         self.face.set_caption("")
-        await self.say("Building it now, sir.")
+        await self.say(f"Building it now, {self.response_name}.")
 
         if self.cancelled:
-            await self.say("Cancelled, sir.", next_state="listening")
+            await self.say(f"Cancelled, {self.response_name}.", next_state="listening")
             return
 
         # show writing code if any step is generate_code
@@ -486,7 +487,7 @@ class Observer:
         self.face.set_caption("")
 
         if self.cancelled:
-            await self.say("Cancelled, sir.")
+            await self.say(f"Cancelled, {self.response_name}.")
             return
 
         if results:
@@ -524,7 +525,7 @@ class Observer:
             finally:
                 self.brain.api_models[e.model_key]["ask_permission"] = original
         else:
-            await self.say("Cancelled. Handling locally instead, sir.")
+            await self.say(f"Cancelled. Handling locally instead, {self.response_name}.")
             await self._run_local_plan(command)
 
     async def _handle_plan_error(self, e: PlanExecutionError, plan: dict):
@@ -547,15 +548,15 @@ class Observer:
                     if results:
                         await self.say(results[-1])
                 else:
-                    await self.say("Leaving the existing file untouched, sir.")
+                    await self.say(f"Leaving the existing file untouched, {self.response_name}.")
         else:
-            await self.say(f"I ran into a problem, sir. {e.reason}")
+            await self.say(f"I ran into a problem, {self.response_name}. {e.reason}")
 
     async def _handle_model_unavailable(self, e: ModelUnavailable, command: str):
         """Handle unavailable model by falling back to local."""
         print(f"[Brain] Model unavailable: {e.model_key}")
         await self.say(
-            f"The {e.model_key} model is unavailable, sir. Handling locally instead."
+            f"The {e.model_key} model is unavailable, {self.response_name}. Handling locally instead."
         )
         await self._run_local_plan(command)
 
@@ -568,7 +569,7 @@ class Observer:
 
         if plan.get("steps"):
             await self.say(summary)
-            await self.say("Shall I proceed, sir?")
+            await self.say(f"Shall I proceed, {self.response_name}?")
 
             audio_bytes, duration = await self.ears.listen()
             response = self.stt.transcribe(audio_bytes, duration).lower().strip() if audio_bytes else ""
@@ -579,7 +580,7 @@ class Observer:
             ])
 
             if not confirmed:
-                await self.say("Understood, sir. Cancelled.")
+                await self.say(f"Understood, {self.response_name}. Cancelled.")
                 return
 
             results = await self.executor.execute_plan(
@@ -662,7 +663,7 @@ class Observer:
 
     def _build_capabilities(self) -> str:
         core = (
-            "Quite a few things, sir. "
+            f"Quite a few things, {self.response_name}. "
             "I can answer questions, tell jokes, and hold a conversation. "
             "I can open applications, control your browser, search the web, and navigate pages. "
             "I can read and summarize PDF documents. "
@@ -695,7 +696,7 @@ class Observer:
         if integration_caps:
             core += f"I can also {' and '.join(integration_caps)}. "
 
-        core += "What would you like me to do, sir?"
+        core += f"What would you like me to do, {self.response_name}?"
         return core
 
     # Adding new features

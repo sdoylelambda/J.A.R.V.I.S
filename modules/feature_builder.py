@@ -15,6 +15,7 @@ class FeatureBuilder:
         self.tools = tool_executor
         self.observer = observer
         self.config = config or {}
+        self.response_name = config["personalize"].get("response_name", "")
         self.feature_root = "modules/features"
         self.pending_feature = None
 
@@ -202,7 +203,7 @@ Summary:
 
 This will create {len(plan.get('files', []))} file(s).
 
-Shall I proceed, sir?
+Shall I proceed, {self.response_name}?
 """
 
     # ─────────────────────────────────────────────

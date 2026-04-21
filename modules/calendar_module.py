@@ -17,6 +17,7 @@ class CalendarModule:
     def __init__(self, config: dict):
         self.debug = True
         self.config = config.get("integrations", {}).get("google_calendar", {})
+        self.response_name = config["personalize"].get("response_name", "")
         self.creds_path = os.path.expanduser(self.config.get("credentials_path", "~/.config/atlas/google_calendar_credentials.json"))
         self.token_path = os.path.expanduser(self.config.get("token_path", "~/.config/atlas/google_calendar_token.json"))
         self.service = None
@@ -239,19 +240,19 @@ class CalendarModule:
 
     async def guided_create_event(self, say, listen) -> dict | None:
         """Ask user for event details one at a time."""
-        await say("What's the title of the event, sir?")
+        await say(f"What's the title of the event, {self.response_name}?")
         audio, duration = await listen()
         if not audio:
             return None
         title = audio  # raw transcription
 
-        await say("What day, sir?")
+        await say(f"What day, {self.response_name}?")
         audio, duration = await listen()
         if not audio:
             return None
         day_text = audio
 
-        await say("What time, sir?")
+        await say(f"What time, {self.response_name}?")
         audio, duration = await listen()
         if not audio:
             return None
@@ -285,7 +286,7 @@ class CalendarModule:
     def format_events_for_speech(self, events: list, multi_day: bool = False) -> str:
         """Convert events list to natural speech string."""
         if not events:
-            return "Nothing on the calendar, sir."
+            return f"Nothing on the calendar, {self.response_name}."
 
         if not multi_day:
             # original single day format
@@ -302,11 +303,11 @@ class CalendarModule:
                     parts.append(f"{title} all day")
 
             if len(parts) == 1:
-                return parts[0] + ", sir."
+                return parts[0] + f", {self.response_name}."
             elif len(parts) == 2:
-                return f"{parts[0]} and {parts[1]}, sir."
+                return f"{parts[0]} and {parts[1]}, {self.response_name}."
             else:
-                return ", ".join(parts[:-1]) + f", and {parts[-1]}, sir."
+                return ", ".join(parts[:-1]) + f", and {parts[-1]}, {self.response_name}."
 
         else:
             # multi-day format — group by day
@@ -348,4 +349,4 @@ class CalendarModule:
 
                 sentences.append(day_str)
 
-            return " ".join(sentences) + " Sir."
+            return " ".join(sentences) + f" {self.response_name}."

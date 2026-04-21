@@ -12,6 +12,7 @@ from modules.utils import timer
 class Eyes:
     def __init__(self, config: dict):
         self.config = config.get("vision", {})
+        self.response_name = config["personalize"].get("response_name", "")
         self.camera_index = self.config.get("camera_index", 0)
         self.model = self.config.get("model", "llava")
         self.debug = True
@@ -71,7 +72,7 @@ class Eyes:
 
         if total_mb > max_mb:
             print(f"[Vision] ⚠️ {total_mb:.1f}MB exceeds {max_mb}MB limit")
-            return f"Warning sir, vision storage is {total_mb:.0f} megabytes. You may want to clear the eyes folder."
+            return f"Warning {self.response_name}, vision storage is {total_mb:.0f} megabytes. You may want to clear the eyes folder."
 
         print(f"[Vision] Storage: {total_mb:.1f}MB / {max_mb}MB")
         return None
@@ -82,7 +83,7 @@ class Eyes:
         image_b64 = self.capture_frame()
 
         if not image_b64:
-            return "I couldn't access the camera, sir."
+            return f"I couldn't access the camera, {self.response_name}."
 
         print(f"[Eyes] Analyzing with {self.model}...")
         try:
@@ -101,11 +102,12 @@ class Eyes:
 
         except Exception as e:
             print(f"[Vision] Error: {e}")
-            return "I had trouble analyzing the image, sir."
+            return f"I had trouble analyzing the image, {self.response_name}."
 
     def what_do_you_see(self) -> str:
         return self.analyze(
-            "You are Atlas, a British AI assistant. Describe what you see concisely in 1-2 sentences. Address the user as sir."
+            "You are Atlas, a British AI assistant. Describe what you see concisely in 1-2 sentences. Address the user"
+            f" as {self.response_name}."
         )
 
     def read_text(self) -> str:
@@ -115,48 +117,50 @@ class Eyes:
 
     def identify_object(self) -> str:
         return self.analyze(
-            "What is the main object in this image? Describe it briefly in one sentence. Address the user as sir."
+            "What is the main object in this image? Describe it briefly in one sentence. Address the user as "
+            f"{self.response_name}."
         )
 
     def is_someone_present(self) -> str:
         return self.analyze(
-            "Is there a person visible in this image? Answer yes or no and describe briefly. Address the user as sir."
+            "Is there a person visible in this image? Answer yes or no and describe briefly. Address the user as "
+            f"{self.response_name}."
         )
 
     def describe_scene(self) -> str:
         return self.analyze(
             "Describe the scene in detail — what's in the room, on the desk, "
-            "in the background. Be thorough but concise. Address the user as sir."
+            f"in the background. Be thorough but concise. Address the user as {self.response_name}."
         )
 
     def count_people(self) -> str:
         return self.analyze(
             "How many people are visible in this image? Describe them briefly. "
-            "If none, say so. Address the user as sir."
+            f"If none, say so. Address the user as {self.response_name}."
         )
 
     def read_document(self) -> str:
         return self.analyze(
             "Read and transcribe all text visible in this image as accurately as possible. "
-            "If no text is visible, say so. Address the user as sir."
+            f"If no text is visible, say so. Address the user as {self.response_name}."
         )
 
     def identify_color(self) -> str:
         return self.analyze(
             "What are the main colors visible in this image? "
-            "Describe briefly. Address the user as sir."
+            f"Describe briefly. Address the user as {self.response_name}."
         )
 
     def describe_activity(self) -> str:
         return self.analyze(
             "What activity or action is happening in this image? "
-            "Describe what the person appears to be doing. Address the user as sir."
+            f"Describe what the person appears to be doing. Address the user as {self.response_name}."
         )
 
     def analyze_with_question(self, question: str) -> str:
         return self.analyze(
             f"Answer this question about what you see: '{question}'. "
-            f"Be brief and direct. Address the user as sir."
+            f"Be brief and direct. Address the user as {self.response_name}."
         )
 
     def capture_screen_sync(self) -> str | None:
@@ -267,7 +271,7 @@ class Eyes:
         final_prompt = prompt or (
             "Describe what's on this screen concisely. "
             "What application is open and what is it showing? "
-            "Address the user as sir."
+            f"Address the user as {self.response_name}."
         )
 
         # Run analyzer in thread if heavy
@@ -300,11 +304,11 @@ class Eyes:
     async def analyze_screenshot(self, prompt: str = None) -> str:  # ← add async
         image_b64 = await self.get_latest_screenshot()  # ← await directly, already async
         if not image_b64:
-            return "No screenshots found, sir. Try taking one first with Print Screen."
+            return f"No screenshots found, {self.response_name}. Try taking one first with Print Screen."
         return await asyncio.to_thread(
             self._analyze_image,
             image_b64,
-            prompt or "Describe this screenshot concisely. What does it show? Address the user as sir."
+            prompt or f"Describe this screenshot concisely. What does it show? Address the user as {self.response_name}."
         )
     def _analyze_image(self, image_b64: str, prompt: str) -> str:
         """Shared image analysis — used by webcam, screen capture, and screenshots."""
@@ -324,4 +328,4 @@ class Eyes:
             return result
         except Exception as e:
             print(f"[Vision] Error: {e}")
-            return "I had trouble analyzing the image, sir."
+            return f"I had trouble analyzing the image, {self.response_name}."

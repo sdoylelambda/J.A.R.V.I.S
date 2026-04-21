@@ -152,9 +152,9 @@ All core functionality runs **completely locally** on your machine. No data leav
 - [x] Summarize screenshot
 - [x] Summarize PDF
 - [x] Persistent memory and user preferences
+- [x] Add way user wants to be addressed to config.yaml (sir, ma'am, John, Jane, etc.)
 
 ### Planned
-- [ ] Add way user wants to be addressed to config.yaml (sir, ma'am, John, Jane, etc.)
 - [ ] Self-expanding fast keyword layer
 - [ ] RAG over local notes and files
 - [ ] Research topic 

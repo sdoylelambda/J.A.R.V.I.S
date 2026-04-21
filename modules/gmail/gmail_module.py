@@ -16,6 +16,7 @@ SCOPES = [
 class GmailModule:
     def __init__(self, config: dict):
         self.config = config.get("integrations", {}).get("gmail", {})
+        self.response_name = config["personalize"].get("response_name", "")
         self.creds_path = os.path.expanduser(
             config.get("integrations", {}).get("google_calendar", {}).get(
                 "credentials_path", "~/.config/atlas/google_calendar_credentials.json"
@@ -172,7 +173,7 @@ class GmailModule:
         print(f"[Gmail] Email sent to {to}")
         return True
 
-    def reply_to_email(self, email_id: str, body: str, save_as_draft: bool = True) -> str:
+    def reply_to_email(self, email_id: str, body: str, save_as_draft: bool = True) -> str | None:
         """Reply to an existing email — saves as draft by default."""
         self._ensure_authenticated()
         original = self._parse_email(email_id)
@@ -245,16 +246,16 @@ class GmailModule:
     def format_emails_for_speech(self, emails: list) -> str:
         """Convert email list to natural speech."""
         if not emails:
-            return "No emails found, sir."
+            return f"No emails found, {self.response_name}."
 
         if len(emails) == 1:
             e = emails[0]
             sender = e['from'].split('<')[0].strip()
-            return f"One email from {sender} — {e['subject']}. {e['snippet'][:100]}, sir."
+            return f"One email from {sender} — {e['subject']}. {e['snippet'][:100]}, {self.response_name}."
 
         parts = []
         for i, e in enumerate(emails, 1):
             sender = e['from'].split('<')[0].strip()
             parts.append(f"{i}. From {sender} — {e['subject']}")
 
-        return f"You have {len(emails)} emails. " + ". ".join(parts) + ", sir."
+        return f"You have {len(emails)} emails. " + ". ".join(parts) + f", {self.response_name}."
