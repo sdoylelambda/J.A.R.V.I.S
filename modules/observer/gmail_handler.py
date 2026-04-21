@@ -1,12 +1,14 @@
 import asyncio
 
 
-async def handle_gmail_command(text: str, gmail, drafter, calendar, say, ears, stt) -> bool:
+async def handle_gmail_command(text: str, gmail, drafter, calendar, say, ears, stt, config) -> bool:
     """
     Handle Gmail voice commands. Returns True if handled.
     """
     if not gmail:
         return False
+
+    response_name = config["personalize"].get("response_name", "")
 
     # ── Read unread ───────────────────────────────────────────────────────
     # fast — no model
@@ -36,7 +38,7 @@ async def handle_gmail_command(text: str, gmail, drafter, calendar, say, ears, s
     # ]):
     #     emails = await asyncio.to_thread(gmail.get_unread, 5)
     #     if not emails:
-    #         await say("No unread emails, sir.", next_state="listening")
+    #         await say(f"No unread emails, {response_name}.", next_state="listening")
     #         return True
     #     summary = await asyncio.to_thread(drafter.summarize_inbox, emails)
     #     await say(summary, next_state="listening")
@@ -52,7 +54,7 @@ async def handle_gmail_command(text: str, gmail, drafter, calendar, say, ears, s
             response = gmail.format_emails_for_speech(emails)
             await say(response, next_state="listening")
         else:
-            await say("Who should I search for, sir?", next_state="listening")
+            await say(f"Who should I search for, {response_name}?", next_state="listening")
         return True
 
     # ── Read specific email ───────────────────────────────────────────────
@@ -62,7 +64,7 @@ async def handle_gmail_command(text: str, gmail, drafter, calendar, say, ears, s
     ]):
         emails = await asyncio.to_thread(gmail.get_unread, 1)
         if not emails:
-            await say("No unread emails to read, sir.", next_state="listening")
+            await say(f"No unread emails to read, {response_name}.", next_state="listening")
             return True
         email = emails[0]
         body = await asyncio.to_thread(gmail.get_email_body, email['id'])
@@ -77,7 +79,7 @@ async def handle_gmail_command(text: str, gmail, drafter, calendar, say, ears, s
     ]):
         emails = await asyncio.to_thread(gmail.get_unread, 10)
         if not emails:
-            await say("Inbox is clear, sir.", next_state="listening")
+            await say(f"Inbox is clear, {response_name}.", next_state="listening")
             return True
 
         # classify each email
@@ -91,9 +93,9 @@ async def handle_gmail_command(text: str, gmail, drafter, calendar, say, ears, s
         if important:
             parts = [f"{e['from'].split('<')[0].strip()} about {e['subject']}" for e in important[:3]]
             response = f"You have {len(important)} important email{'s' if len(important) > 1 else ''}. "
-            response += ", and ".join(parts) + ", sir."
+            response += ", and ".join(parts) + f", {response_name}."
         else:
-            response = f"You have {len(emails)} unread emails, none flagged as urgent, sir."
+            response = f"You have {len(emails)} unread emails, none flagged as urgent, {response_name}."
 
         await say(response, next_state="listening")
         return True
@@ -104,14 +106,14 @@ async def handle_gmail_command(text: str, gmail, drafter, calendar, say, ears, s
     ]):
         emails = await asyncio.to_thread(gmail.get_unread, 1)
         if not emails:
-            await say("No emails to reply to, sir.", next_state="listening")
+            await say(f"No emails to reply to, {response_name}.", next_state="listening")
             return True
 
         email = emails[0]
         sender = email['from'].split('<')[0].strip()
 
         # ask for instruction
-        await say(f"Drafting reply to {sender}. What should I say, sir?")
+        await say(f"Drafting reply to {sender}. What should I say, {response_name}?")
         audio_bytes, dur = await ears.listen()
         instruction = stt.transcribe(audio_bytes, dur).lower().strip() if audio_bytes else ""
 
@@ -119,7 +121,7 @@ async def handle_gmail_command(text: str, gmail, drafter, calendar, say, ears, s
         draft_id = await asyncio.to_thread(gmail.reply_to_email, email['id'], draft_body)
 
         await say(f"Draft saved. Here's what I wrote: {draft_body[:200]}")
-        await say("Shall I send it, sir?")
+        await say(f"Shall I send it, {response_name}?")
 
         audio_bytes, dur = await ears.listen()
         response = stt.transcribe(audio_bytes, dur).lower().strip() if audio_bytes else ""
@@ -127,9 +129,9 @@ async def handle_gmail_command(text: str, gmail, drafter, calendar, say, ears, s
         confirmed = any(w in response for w in ["yes", "yeah", "send", "do it", "sure"])
         if confirmed:
             await asyncio.to_thread(gmail.send_draft, draft_id)
-            await say("Sent, sir.", next_state="listening")
+            await say(f"Sent, {response_name}.", next_state="listening")
         else:
-            await say("Draft saved in Gmail for your review, sir.", next_state="listening")
+            await say(f"Draft saved in Gmail for your review, {response_name}.", next_state="listening")
         return True
 
     # ── Send new email ────────────────────────────────────────────────────
@@ -145,23 +147,23 @@ async def handle_gmail_command(text: str, gmail, drafter, calendar, say, ears, s
             name = ""
 
         if not name:
-            await say("Who should I send it to, sir?")
+            await say(f"Who should I send it to, {response_name}?")
             audio_bytes, dur = await ears.listen()
             name = stt.transcribe(audio_bytes, dur).lower().strip() if audio_bytes else ""
 
         # find email address
         to_email = await asyncio.to_thread(gmail.find_contact_email, name)
         if not to_email:
-            await say(f"I couldn't find an email address for {name}, sir.", next_state="listening")
+            await say(f"I couldn't find an email address for {name}, {response_name}.", next_state="listening")
             return True
 
         # get subject
-        await say("What's the subject, sir?")
+        await say(f"What's the subject, {response_name}?")
         audio_bytes, dur = await ears.listen()
         subject = stt.transcribe(audio_bytes, dur).strip() if audio_bytes else "No subject"
 
         # get message
-        await say("What should it say, sir?")
+        await say(f"What should it say, {response_name}?")
         audio_bytes, dur = await ears.listen()
         instruction = stt.transcribe(audio_bytes, dur).lower().strip() if audio_bytes else ""
 
@@ -176,7 +178,7 @@ async def handle_gmail_command(text: str, gmail, drafter, calendar, say, ears, s
         draft_id = await asyncio.to_thread(gmail.save_draft, to_email, subject, draft_body)
 
         await say(f"Draft ready. Here's what I wrote: {draft_body[:200]}")
-        await say("Shall I send it, sir?")
+        await say(f"Shall I send it, {response_name}?")
 
         audio_bytes, dur = await ears.listen()
         response = stt.transcribe(audio_bytes, dur).lower().strip() if audio_bytes else ""
@@ -184,9 +186,9 @@ async def handle_gmail_command(text: str, gmail, drafter, calendar, say, ears, s
         confirmed = any(w in response for w in ["yes", "yeah", "send", "do it", "sure"])
         if confirmed:
             await asyncio.to_thread(gmail.send_draft, draft_id)
-            await say("Sent, sir.", next_state="listening")
+            await say(f"Sent, {response_name}.", next_state="listening")
         else:
-            await say("Draft saved in Gmail for your review, sir.", next_state="listening")
+            await say(f"Draft saved in Gmail for your review, {response_name}.", next_state="listening")
         return True
 
     # ── Meeting request detection ─────────────────────────────────────────
@@ -203,7 +205,7 @@ async def handle_gmail_command(text: str, gmail, drafter, calendar, say, ears, s
                 meeting_emails.append(email)
 
         if not meeting_emails:
-            await say("No meeting requests in your inbox, sir.", next_state="listening")
+            await say(f"No meeting requests in your inbox, {response_name}.", next_state="listening")
             return True
 
         for email in meeting_emails[:2]:
@@ -211,7 +213,7 @@ async def handle_gmail_command(text: str, gmail, drafter, calendar, say, ears, s
             sender = email['from'].split('<')[0].strip()
             await say(
                 f"Meeting request from {sender}. {c.get('summary', email['subject'])}. "
-                f"Shall I draft a reply and add it to your calendar, sir?"
+                f"Shall I draft a reply and add it to your calendar, {response_name}?"
             )
 
             audio_bytes, dur = await ears.listen()
@@ -237,16 +239,16 @@ async def handle_gmail_command(text: str, gmail, drafter, calendar, say, ears, s
                 )
                 await say(
                     f"Added to calendar and draft reply saved. "
-                    f"Here's the reply: {draft_body[:150]}. Shall I send it, sir?"
+                    f"Here's the reply: {draft_body[:150]}. Shall I send it, {response_name}?"
                 )
 
                 audio_bytes, dur = await ears.listen()
                 send_response = stt.transcribe(audio_bytes, dur).lower().strip() if audio_bytes else ""
                 if any(w in send_response for w in ["yes", "yeah", "send", "sure"]):
                     await asyncio.to_thread(gmail.send_draft, draft_id)
-                    await say("Sent and calendar updated, sir.", next_state="listening")
+                    await say(f"Sent and calendar updated, {response_name}.", next_state="listening")
                 else:
-                    await say("Draft saved in Gmail for your review, sir.", next_state="listening")
+                    await say(f"Draft saved in Gmail for your review, {response_name}.", next_state="listening")
 
         return True
 

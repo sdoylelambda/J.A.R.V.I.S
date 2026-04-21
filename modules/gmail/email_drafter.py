@@ -6,6 +6,7 @@ from modules.brain import Brain
 class EmailDrafter:
     def __init__(self, config: dict):
         self.brain = Brain(config)
+        self.response_name = config["personalize"].get("response_name", "")
         self.debug = True
 
     def classify_importance(self, email: dict) -> dict:
@@ -102,7 +103,7 @@ class EmailDrafter:
     def summarize_inbox_fast(self, emails: list) -> str:
         """Fast rule-based inbox summary — no LLM."""
         if not emails:
-            return "Your inbox is clear, sir."
+            return f"Your inbox is clear, {self.response_name}."
 
         classified = [self.classify_importance_fast(e) for e in emails]
         high = [e for e, c in zip(emails, classified) if c['importance'] == 'high']
@@ -122,14 +123,14 @@ class EmailDrafter:
             parts.append(f"{len(low)} newsletters")
 
         total = f"You have {len(emails)} unread emails — "
-        return total + ", ".join(parts) + ", sir."
+        return total + ", ".join(parts) + f", {self.response_name}."
 
         # ── Mistral-powered (only when needed) ────────────────────────────────
 
     def analyze_importance(self, emails: list) -> str:
         """Deep analysis — Mistral reviews emails for action items."""
         if not emails:
-            return "Nothing requiring attention, sir."
+            return f"Nothing requiring attention, {self.response_name}."
 
         email_list = "\n".join([
             f"- From {e['from'].split('<')[0].strip()}: {e['subject']} — {e['snippet'][:100]}"
@@ -137,7 +138,7 @@ class EmailDrafter:
         ])
 
         prompt = f"""Review these emails and identify what needs attention.
-            Be concise — 2-3 sentences max. End with 'sir'.
+            Be concise — 2-3 sentences max. End with {self.response_name}'.
             Focus on action items, deadlines, meeting requests.
             Ignore newsletters and promotions.
         
