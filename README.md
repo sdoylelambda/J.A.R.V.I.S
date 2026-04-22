@@ -1076,6 +1076,13 @@ browser:
 ```
 
 ---
+## Response Name
+To change response from "sir" to "ma'am", "John", "Jill", etc. update response_name on config.yaml.
+To change Atlas's name, update ai_assistant_name.
+personalize:
+  ai_assistant_name: "A.T.L.A.S."
+  response_name: 'sir'
+---
 
 ## config.yaml Reference
 
@@ -1083,7 +1090,7 @@ browser:
 # ---- Personalize ----
 personalize:
   ai_assistant_name: "A.T.L.A.S."
-  # response_name: 'sir' -- allow user to change to 'ma'am', 'john', 'jane', etc.
+  response_name: 'sir'
   # home_city: "New York"  -- for what's the weather and local based responses
 
 gui:
