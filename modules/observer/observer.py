@@ -140,7 +140,7 @@ class Observer:
                         # app shortcuts
                         "save", "run", "clear",
                         # build commands
-                        "yeah", "yep", "do",  "it", "proceed",
+                        "y", "yeah", "yep", "do",  "it", "proceed",
                         "sure", "go", "ahead", "affirmative", "correct",
                         "build", "sounds", "good"
                         # calendar commands
@@ -203,7 +203,7 @@ class Observer:
                 # 🧠 Memory commands
                 if any(phrase in text for phrase in [
                     "remember that", "remember this", "make a note",
-                    "don't forget", "keep in mind"
+                    "don't forget", "keep in mind", "i like", "i don't like"
                 ]):
                     memory_text = text
                     for phrase in ["remember that", "remember this", "make a note",
@@ -514,7 +514,8 @@ class Observer:
             audio_bytes, duration = await self.ears.listen()
             response = self.stt.transcribe(audio_bytes, duration).lower().strip() if audio_bytes else ""
 
-        if any(w in response for w in ["y", "yes", "yeah", "yep", "do it", "send", "sure"]):
+        if any(w in response for w in ["y", "yes", "yeah", "yep", "do it", "send", "sure", "go ahead", "build",
+                                       "sounds", "good", "proceed"]):
             # temporarily disable permission check
             print(f"[STT Raw] '{response}'")
             original = self.brain.api_models[e.model_key].get("ask_permission")
