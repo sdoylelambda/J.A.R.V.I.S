@@ -1,7 +1,7 @@
 import pytest
 import datetime
 from unittest.mock import MagicMock, patch
-from modules.calendar_module import CalendarModule
+from modules.calendar_controller import CalendarModule
 
 
 @pytest.fixture

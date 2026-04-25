@@ -178,6 +178,7 @@ All core functionality runs **completely locally** on your machine. No data leav
 - [ ] Auto calendar alerts
 - [ ] Auto check email - notify - respond
 - [ ] Additional voice controlled app integrations
+- [ ] Real time weather monitoring with alerts
 
 ---
 
