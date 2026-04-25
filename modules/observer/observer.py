@@ -11,8 +11,8 @@ from modules.app_launcher import AppLauncher
 from modules.tool_executor import ToolExecutor
 from modules.browser_controller import BrowserController
 from modules.utils import timer
-from modules.calendar_module import CalendarModule
-from modules.gmail.gmail_module import GmailModule
+from modules.calendar_controller import CalendarModule
+from modules.gmail.gmail_controller import GmailModule
 from modules.gmail.email_drafter import EmailDrafter
 from config.api_keys import set_key_request_callback
 from custom_exceptions import PermissionRequired, ModelUnavailable, PlanExecutionError
