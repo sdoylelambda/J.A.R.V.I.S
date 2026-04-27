@@ -3,6 +3,8 @@ import json
 import ollama
 import anthropic
 import textwrap
+import threading
+import time
 
 from anthropic.types import MessageParam
 from google import genai
@@ -13,17 +15,19 @@ from config.api_keys import get_api_key
 
 class Brain:
     def __init__(self, config: dict):
+        self.debug = False
         self.config = config["llm"]
         self.response_name = config["personalize"].get("response_name", "")
         self.models = self.config["models"]
         self.api_models = self.config["api_models"]
         self._gemini_client = None
 
-        # FAISS memory (step 11 - RAG, stubbed for now)
+        # FAISS memory (is this still relevant with mempalace?)
         self.vector_db = faiss.IndexFlatL2(384)
         self.memory_texts = []
         self._encoder = None  # lazy load
-        self.debug = False
+        self.active_proc = None
+        self.cancel_event = threading.Event()
 
     # ─── core query method ───────────────────────────────────────────────
 
@@ -31,25 +35,74 @@ class Brain:
               system: str = None, num_ctx_override: int = None,
               max_tokens_override: int = None, bypass_permission: bool = False) -> str:
         """Single entry point for all LLM calls."""
+        self.cancel_requested = False
+        result = {}
+        cfg = {}
 
         # local ollama models
+        import queue
+        import threading
+
         if model_key in self.models:
             cfg = self.models[model_key]
+
             messages = []
             if system:
                 messages.append({"role": "system", "content": system})
             messages.append({"role": "user", "content": prompt})
 
-            response = ollama.chat(
-                model=cfg["name"],
-                messages=messages,
-                options={
-                    "num_ctx": int(num_ctx_override or cfg.get("num_ctx", 512)),
-                    "temperature": float(cfg.get("temperature", 0.1)),
-                    "num_predict": int(max_tokens_override or cfg.get("max_tokens", 500)),
-            }
-        )
-            return response["message"]["content"]
+            self.cancel_event.clear()
+
+            output_queue = queue.Queue()
+            result = []
+
+            def run_ollama():
+                try:
+                    stream = ollama.chat(
+                        model=cfg["name"],
+                        messages=messages,
+                        stream=True,
+                        options={
+                            "num_ctx": int(num_ctx_override or cfg.get("num_ctx", 512)),
+                            "temperature": float(cfg.get("temperature", 0.1)),
+                            "num_predict": int(max_tokens_override or cfg.get("max_tokens", 500)),
+                        }
+                    )
+
+                    for chunk in stream:
+                        if self.cancel_event.is_set():
+                            try:
+                                stream.close()
+                            except:
+                                pass
+                            return
+
+                        msg = chunk.get("message")
+                        if msg:
+                            token = msg.get("content", "")
+                            if token:
+                                output_queue.put(token)
+
+                except Exception as e:
+                    output_queue.put(f"[ERROR] {e}")
+
+            # start worker
+            t = threading.Thread(target=run_ollama, daemon=True)
+            t.start()
+
+            # main thread consumes output
+            while t.is_alive() or not output_queue.empty():
+
+                if self.cancel_event.is_set():
+                    return ""
+
+                try:
+                    token = output_queue.get(timeout=0.05)
+                    result.append(token)
+                except queue.Empty:
+                    continue
+
+            return "".join(result)
 
         # claude api
         elif model_key == "claude":
@@ -278,6 +331,7 @@ class Brain:
             system=system,
             num_ctx_override=num_ctx
         )
+        print(f"[Brain] Mistral raw response length: {len(result)}")
         print(f"[Brain] Mistral raw response: {result[:200]}")
 
         try:
@@ -401,3 +455,18 @@ class Brain:
             return 2048  # medium commands
         else:
             return 4096  # long commands
+
+    # ─── cancel active llm  ─────────────────────────────────────────────
+
+    def cancel(self):
+        self.cancel_event.set()
+
+        # optional but important: forces UI responsiveness immediately
+        try:
+            import threading
+            for t in threading.enumerate():
+                if t != threading.main_thread():
+                    pass
+        except:
+            pass
+
