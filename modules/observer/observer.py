@@ -635,9 +635,10 @@ class Observer:
     def _cancel_all(self):
         self.cancelled = True
         try:
+            self.brain.cancel()
             self.mouth.stop()
         except Exception as e:
-            print(f"[Observer] Error stopping TTS: {e}")
+            print(f"[Observer] Error cancelling: {e}")
         self.ears.paused = False
         self.face.set_state("listening")
         print("[Observer] Cancelled via GUI")
