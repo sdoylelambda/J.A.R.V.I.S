@@ -173,6 +173,7 @@ class Observer:
                 # ❌ Cancel command
                 if any(word in text for word in ["cancel", "stop", "never mind", "forget it"]):
                     self.mouth.stop()  # ← interrupt speech instantly
+                    self.brain.cancel()
                     self.face.set_state("listening")
                     await self.say("Cancelled.")
                     continue
@@ -419,6 +420,7 @@ class Observer:
                     if any(w in text for w in ["cancel", "stop", "never mind", "forget it"]):
                         print("[Observer] Cancel detected during execution!")
                         self.cancelled = True
+                        self.brain.cancel()
                         self.mouth.stop()
                         return
             except asyncio.TimeoutError:

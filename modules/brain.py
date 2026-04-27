@@ -40,6 +40,9 @@ class Brain:
         cfg = {}
 
         # local ollama models
+        import queue
+        import threading
+
         if model_key in self.models:
             cfg = self.models[model_key]
 
@@ -48,42 +51,58 @@ class Brain:
                 messages.append({"role": "system", "content": system})
             messages.append({"role": "user", "content": prompt})
 
-            self.cancel_requested = False
             self.cancel_event.clear()
 
-            stream = ollama.chat(
-                model=cfg["name"],
-                messages=messages,
-                stream=True,
-                options={
-                    "num_ctx": int(num_ctx_override or cfg.get("num_ctx", 512)),
-                    "temperature": float(cfg.get("temperature", 0.1)),
-                    "num_predict": int(max_tokens_override or cfg.get("max_tokens", 500)),
-                }
-            )
+            output_queue = queue.Queue()
+            result = []
 
-            tokens = []
+            def run_ollama():
+                try:
+                    stream = ollama.chat(
+                        model=cfg["name"],
+                        messages=messages,
+                        stream=True,
+                        options={
+                            "num_ctx": int(num_ctx_override or cfg.get("num_ctx", 512)),
+                            "temperature": float(cfg.get("temperature", 0.1)),
+                            "num_predict": int(max_tokens_override or cfg.get("max_tokens", 500)),
+                        }
+                    )
 
-            for chunk in stream:
+                    for chunk in stream:
+                        if self.cancel_event.is_set():
+                            try:
+                                stream.close()
+                            except:
+                                pass
+                            return
 
-                # 🔥 FAST cancel check (must be FIRST line in loop)
+                        msg = chunk.get("message")
+                        if msg:
+                            token = msg.get("content", "")
+                            if token:
+                                output_queue.put(token)
+
+                except Exception as e:
+                    output_queue.put(f"[ERROR] {e}")
+
+            # start worker
+            t = threading.Thread(target=run_ollama, daemon=True)
+            t.start()
+
+            # main thread consumes output
+            while t.is_alive() or not output_queue.empty():
+
                 if self.cancel_event.is_set():
-                    try:
-                        stream.close()
-                    except:
-                        pass
                     return ""
 
-                # 🔥 avoid blocking on malformed chunk
-                msg = chunk.get("message")
-                if not msg:
+                try:
+                    token = output_queue.get(timeout=0.05)
+                    result.append(token)
+                except queue.Empty:
                     continue
 
-                token = msg.get("content", "")
-                if token:
-                    tokens.append(token)
-
-            return "".join(tokens)
+            return "".join(result)
 
         # claude api
         elif model_key == "claude":
