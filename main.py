@@ -71,7 +71,7 @@ async def run_text_only(config):
 
     await asyncio.gather(
         observer.listen_and_respond(),
-        text_input_loop()
+        text_input_loop(config)
     )
 
 def run_async(face, config):
