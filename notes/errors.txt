@@ -8,7 +8,9 @@ fix cut off JSON
 calendar and follow-up commands don't work on termux -- they work as text commands on gui
 face.on_command = handle_text_input --- probably here on main.py
 
-escalation for non code
+escalation for non code -- increase cutoff? + mistral (or other) for complex questions
+
+GUI display on Termux mobile connect
 
 print ctx for deepseek
 
